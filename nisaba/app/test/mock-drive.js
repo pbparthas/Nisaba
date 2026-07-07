@@ -6,6 +6,7 @@ import http from 'node:http';
 
 export function startMockDrive() {
   const files = new Map(); // id -> {id, name, mimeType, parents, version, content(Buffer)}
+  const requests = []; // {method, url} log so tests can assert traffic shape
   let nextId = 1;
 
   function parseMultipart(buf, contentType) {
@@ -34,6 +35,7 @@ export function startMockDrive() {
     req.on('end', () => {
       const body = Buffer.concat(chunks);
       const url = new URL(req.url, 'http://x');
+      requests.push({ method: req.method, url: req.url });
       const json = (obj, code = 200) => {
         res.writeHead(code, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(obj));
@@ -45,7 +47,7 @@ export function startMockDrive() {
       if (req.method === 'GET' && url.pathname === '/drive/v3/files') {
         const q = url.searchParams.get('q') || '';
         const found = [...files.values()].filter((f) => matches(f, q));
-        return json({ files: found.map(({ id, name }) => ({ id, name })) });
+        return json({ files: found.map(({ id, name, version }) => ({ id, name, version: String(version) })) });
       }
       // about
       if (req.method === 'GET' && url.pathname === '/drive/v3/about') {
@@ -96,6 +98,7 @@ export function startMockDrive() {
         baseUrl: `http://127.0.0.1:${server.address().port}`,
         close: () => server.close(),
         _files: files,
+        _requests: requests,
       });
     });
   });

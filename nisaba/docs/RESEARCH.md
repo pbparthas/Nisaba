@@ -1,6 +1,6 @@
 # How others built their Notion/Obsidian — research synthesis
 
-Studied July 2026, before finalizing the NoteSync plan. Three sweeps: Notion-family
+Studied July 2026, before finalizing the Nisaba plan. Three sweeps: Notion-family
 clones (AppFlowy, AFFiNE, Outline, Docmost, SiYuan, Focalboard, Notea, Novel),
 Obsidian-family apps (Logseq, SilverBullet, Zettlr, TriliumNext, Acreom, Foam,
 Dendron, Flatnotes, Memos, Notable, Joplin), and the reusable building-block layer
@@ -56,7 +56,7 @@ Dendron, Flatnotes, Memos, Notable, Joplin), and the reusable building-block lay
   rewrite. Decide source-of-truth vs derived-index up front; never let the
   index carry correctness.
 
-## What NoteSync takes, concretely
+## What Nisaba takes, concretely
 
 | Layer | Adopt | From |
 |---|---|---|

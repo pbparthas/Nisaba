@@ -3,7 +3,7 @@
 
 function open() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('notesync', 2);
+    const req = indexedDB.open('nisaba', 2);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains('items')) db.createObjectStore('items', { keyPath: 'id' });

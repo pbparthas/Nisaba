@@ -1,4 +1,4 @@
-# NoteSync — proposed plan (v2, post-research)
+# Nisaba (formerly NoteSync) — proposed plan (v2, post-research)
 
 Status: **awaiting approval.** Supersedes the pre-research plan; changes driven
 by docs/RESEARCH.md.
@@ -22,7 +22,7 @@ by docs/RESEARCH.md.
 └──────────┬───────────────┘      │   MCP endpoint /mcp (Claude Code) │
            │                      └──────────┬────────────────────────┘
            └────────── Google Drive API ─────┘
-                    NoteSync/ in user's Drive:
+                    Nisaba/ in user's Drive:
                       manifest.json, items/<id>.json,
                       attachments/<attId>__<name>, locks
 ```

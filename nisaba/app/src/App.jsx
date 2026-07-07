@@ -75,7 +75,7 @@ export default function App() {
   return (
     <div className="shell">
       <header className="topbar">
-        <h1>NoteSync</h1>
+        <h1>Nisaba</h1>
         <span className={'status ' + status.split(' ')[0]}>{status}</span>
         {signedIn
           ? <button className="ghost" onClick={() => { auth.signOut(); setSignedIn(false); setStatus('local only'); }}>Sign out</button>
@@ -244,11 +244,11 @@ function SetupScreen({ onSave }) {
   const [value, setValue] = useState('');
   return (
     <div className="shell setup">
-      <h1>NoteSync</h1>
+      <h1>Nisaba</h1>
       <p>
         One-time setup: this app syncs through <strong>your own Google Drive</strong>, so it
         needs a Google OAuth Client ID you create for yourself. Follow{' '}
-        <a href="https://github.com/pbparthas/adhoc-projects/blob/claude/cross-platform-sync-app-wsoso4/notesync/docs/GOOGLE_SETUP.md" target="_blank" rel="noreferrer">
+        <a href="https://github.com/pbparthas/adhoc-projects/blob/claude/cross-platform-sync-app-wsoso4/nisaba/docs/GOOGLE_SETUP.md" target="_blank" rel="noreferrer">
           the setup guide
         </a>{' '}
         (~15 minutes), then paste the Client ID here.
