@@ -29,9 +29,10 @@ export default function App() {
       store,
       drive,
       onStatus: (s) => {
-        if (s === 'auth-needed') { setSignedIn(false); setStatus('sign in to sync'); }
-        else setStatus(s);
-        if (s === 'synced') refresh();
+        if (s === 'auth-needed') { setSignedIn(false); setStatus('sign in to sync'); return; }
+        setStatus(s);
+        // A successful sync proves we hold a valid Google session — reflect it.
+        if (s === 'synced') { setSignedIn(true); refresh(); }
       },
     });
     return { auth, drive, engine };
@@ -147,7 +148,10 @@ function Tasks({ tasks, saveItem }) {
         setTitle(''); setDue('');
       }}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" />
-        <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        <label className="due-field">
+          <span>Due date</span>
+          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        </label>
         <button className="primary" type="submit">Add</button>
       </form>
       <ul className="items">

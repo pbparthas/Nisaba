@@ -37,6 +37,9 @@ export function createAuth(clientId) {
         if (resp.error) return reject(new Error(resp.error));
         token = resp.access_token;
         expiresAt = Date.now() + (resp.expires_in - 60) * 1000;
+        // Any successfully issued token means we are signed in — keep the
+        // persisted flag in lockstep so the UI never disagrees with reality.
+        localStorage.setItem('ns_signed_in', '1');
         resolve(token);
       };
       tokenClient.error_callback = (err) => reject(new Error(err.type || 'auth failed'));

@@ -101,9 +101,27 @@ input[type="checkbox"] {
 .tag { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--accent); margin-right: 6px; }
 
 /* ---------- tasks & subtasks ---------- */
-.task-form { display: flex; gap: 8px; }
-.task-form input[type="date"] { width: 150px; flex: none; }
+.task-form { display: flex; gap: 8px; align-items: stretch; }
 .task-form button { flex: none; }
+
+/* Labeled date box: Android renders an empty <input type=date> as a blank
+   pill, so the field carries its own caption. */
+.due-field {
+  flex: none; width: 132px; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: center;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); padding: 3px 10px 5px;
+}
+.due-field span {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted);
+}
+.due-field input {
+  border: 0; padding: 0; border-radius: 0; background: transparent;
+  font-size: 13.5px; width: 100%;
+}
+.due-field input:focus { outline: none; }
+.due-field:focus-within { border-color: var(--accent); }
 
 li.task { flex-direction: column; align-items: stretch; cursor: default; padding: 0; }
 .task-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
