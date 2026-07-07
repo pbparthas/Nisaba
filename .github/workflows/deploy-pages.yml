@@ -34,7 +34,7 @@ jobs:
         run: npm test
       - name: Build
         working-directory: nisaba/app
-        run: NISABA_BASE=/adhoc-projects/ npm run build
+        run: NISABA_BASE=/Nisaba/ npm run build
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
