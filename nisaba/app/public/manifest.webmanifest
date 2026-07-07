@@ -1,0 +1,13 @@
+{
+  "name": "Nisaba",
+  "short_name": "Nisaba",
+  "description": "Local-first notes and tasks that sync through your own Google Drive",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101418",
+  "theme_color": "#101418",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

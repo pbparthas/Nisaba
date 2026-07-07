@@ -7,8 +7,14 @@ import { newItem } from './lib/merge.js';
 
 const store = createIdbStore();
 
+// The owner's OAuth Client ID (public by design — it only identifies the app
+// to Google; access still requires signing in to the matching account).
+// A different deployment can override it from the first-run screen, which
+// stores the override in localStorage.
+const DEFAULT_CLIENT_ID = '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
+
 export default function App() {
-  const [clientId, setClientId] = useState(() => localStorage.getItem('ns_client_id') || '');
+  const [clientId, setClientId] = useState(() => localStorage.getItem('ns_client_id') || DEFAULT_CLIENT_ID);
   const [signedIn, setSignedIn] = useState(false);
   const [status, setStatus] = useState('local only');
   const [items, setItems] = useState([]);
