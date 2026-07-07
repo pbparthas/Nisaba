@@ -1,6 +1,6 @@
 # Nisaba (formerly NoteSync) — proposed plan (v2, post-research)
 
-Status: **awaiting approval.** Supersedes the pre-research plan; changes driven
+Status: **approved and in progress** (phase 1 shipped; see HANDOFF.md for live state). Supersedes the pre-research plan; changes driven
 by docs/RESEARCH.md.
 
 ## Requirements (locked by earlier discussion)
