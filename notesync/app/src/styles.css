@@ -101,3 +101,15 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
 .tokens li { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: var(--radius); padding: 8px 12px; font-size: 14px; }
 .tokens li span { flex: 1; }
 .tokens li button { padding: 4px 10px; font-size: 13px; }
+
+/* --- additions for the React app --- */
+.shell { max-width: 720px; margin: 0 auto; }
+.shell main { padding: 16px; }
+.setup { padding: 48px 24px; display: flex; flex-direction: column; gap: 14px; }
+.setup a { color: var(--accent); }
+.thumbs { display: flex; gap: 10px; flex-wrap: wrap; }
+.thumbs figure { margin: 0; width: 120px; }
+.thumbs img { width: 100%; border-radius: var(--radius); display: block; }
+.thumbs figcaption { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-btn { cursor: pointer; padding: 10px 16px; border-radius: var(--radius); }
+.status.sign-in, .status.auth-needed { color: var(--danger); }
