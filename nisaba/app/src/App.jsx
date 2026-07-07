@@ -136,6 +136,7 @@ export default function App() {
 function Tasks({ tasks, saveItem }) {
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
+  const [openId, setOpenId] = useState(null); // task whose subtask list is expanded
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
@@ -151,16 +152,80 @@ function Tasks({ tasks, saveItem }) {
       </form>
       <ul className="items">
         {tasks.map((t) => (
-          <li key={t.id} className={t.done ? 'done' : ''}>
-            <input type="checkbox" checked={!!t.done} onChange={(e) => saveItem({ id: t.id, done: e.target.checked })} />
-            <div className="body"><h3>{t.title}</h3></div>
-            {t.due && <span className={'due' + (!t.done && t.due < today ? ' overdue' : '')}>{t.due}</span>}
-            <button className="ghost" onClick={() => confirm('Delete this task?') && saveItem({ id: t.id, deleted: true })}>✕</button>
-          </li>
+          <TaskRow
+            key={t.id}
+            task={t}
+            today={today}
+            open={openId === t.id}
+            onToggleOpen={() => setOpenId(openId === t.id ? null : t.id)}
+            saveItem={saveItem}
+          />
         ))}
         {tasks.length === 0 && <p className="muted">No tasks yet.</p>}
       </ul>
     </>
+  );
+}
+
+function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
+  const [newSub, setNewSub] = useState('');
+  const subs = t.subtasks || [];
+  const doneCount = subs.filter((s) => s.done).length;
+
+  async function setSubtasks(subtasks) {
+    await saveItem({ id: t.id, subtasks });
+  }
+
+  return (
+    <li className={'task' + (t.done ? ' done' : '') + (open ? ' open' : '')}>
+      <div className="task-row">
+        <input type="checkbox" checked={!!t.done} onChange={(e) => saveItem({ id: t.id, done: e.target.checked })} />
+        <div className="body" onClick={onToggleOpen}>
+          <h3>{t.title}</h3>
+          {subs.length > 0 && (
+            <span className={'subcount' + (doneCount === subs.length ? ' all-done' : '')}>
+              {doneCount}/{subs.length}
+            </span>
+          )}
+        </div>
+        {t.due && <span className={'due' + (!t.done && t.due < today ? ' overdue' : '')}>{t.due}</span>}
+        <button className="chevron" aria-label="subtasks" onClick={onToggleOpen}>{open ? '▾' : '▸'}</button>
+      </div>
+
+      {open && (
+        <div className="subtasks">
+          {subs.map((s) => (
+            <label key={s.id} className={'subtask' + (s.done ? ' done' : '')}>
+              <input
+                type="checkbox"
+                checked={!!s.done}
+                onChange={(e) => setSubtasks(subs.map((x) => (x.id === s.id ? { ...x, done: e.target.checked } : x)))}
+              />
+              <span>{s.title}</span>
+              <button
+                className="chevron"
+                aria-label="remove subtask"
+                onClick={(e) => { e.preventDefault(); setSubtasks(subs.filter((x) => x.id !== s.id)); }}
+              >✕</button>
+            </label>
+          ))}
+          <form className="subtask-form" onSubmit={(e) => {
+            e.preventDefault();
+            if (!newSub.trim()) return;
+            setSubtasks([...subs, { id: crypto.randomUUID(), title: newSub.trim(), done: false }]);
+            setNewSub('');
+          }}>
+            <input value={newSub} onChange={(e) => setNewSub(e.target.value)} placeholder="Add a subtask…" />
+            <button type="submit" className="ghost">＋</button>
+          </form>
+          <div className="row subtask-footer">
+            <button className="danger" onClick={() => confirm('Delete this task?') && saveItem({ id: t.id, deleted: true })}>
+              Delete task
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 

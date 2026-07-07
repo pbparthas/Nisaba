@@ -39,6 +39,7 @@ export function newItem(partial) {
     body: '',
     done: false,
     due: null,
+    subtasks: [], // [{id, title, done}] — checklist under a task, syncs with it
     tags: [],
     attachments: [], // [{id, name, mime}] — binary lives in Drive attachments/
     deleted: false,
