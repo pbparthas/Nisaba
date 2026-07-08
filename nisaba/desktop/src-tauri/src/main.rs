@@ -119,10 +119,25 @@ fn main() {
         js_string(&token)
     );
 
+    // Load the deployed web app so UI updates arrive automatically with each
+    // web deploy — no rebuild needed for frontend changes. Dev builds load the
+    // local vite server so local changes hot-reload. Override with NISABA_APP_URL.
+    let app_url = std::env::var("NISABA_APP_URL").unwrap_or_else(|_| {
+        if cfg!(debug_assertions) {
+            "http://localhost:5173/".to_string()
+        } else {
+            "https://nisaba.orionforge.dev/".to_string()
+        }
+    });
+
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(child)))
         .setup(move |app| {
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            WebviewWindowBuilder::new(
+                app,
+                "main",
+                WebviewUrl::External(app_url.parse().expect("valid NISABA_APP_URL")),
+            )
                 .title("Nisaba")
                 .inner_size(440.0, 860.0)
                 .min_inner_size(360.0, 640.0)

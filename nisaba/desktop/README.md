@@ -36,6 +36,14 @@ npm run dev            # dev window (hot-reload; runs ../app vite dev)
 npm run build          # a .deb and .AppImage under src-tauri/target/release/bundle
 ```
 
+**UI updates automatically.** A release build loads the deployed web app
+(`https://nisaba.orionforge.dev`), so every web deploy updates the desktop app
+too — no rebuild needed for frontend changes. You only rebuild the `.deb` when
+the Rust shell (`main.rs`) changes. Dev builds load the local vite server
+(`http://localhost:5173`) so local edits hot-reload; override either with
+`NISABA_APP_URL`. (Trade-off: the window needs a network to load the first time;
+the app's service worker caches it for offline use after that.)
+
 On launch the window shows the app; because the service already holds your
 Google session, tap **Connect Google Drive** once in Settings and it connects
 instantly (it's just confirming the service link — no Google popup). Your notes
