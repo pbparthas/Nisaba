@@ -5,8 +5,12 @@ import { createDriveClient } from './lib/drive.js';
 import { createSyncEngine } from './lib/sync.js';
 import { newItem } from './lib/merge.js';
 import { getMode, applyMode } from './lib/theme.js';
+import { blocksToText } from './lib/notebody.js';
 
 const store = createIdbStore();
+
+// The BlockNote editor is heavy; load it only when a note is opened.
+const NoteEditor = React.lazy(() => import('./NoteEditorBlock.jsx'));
 
 // The owner's OAuth Client ID (public by design — it only identifies the app
 // to Google; access still requires signing in to the matching account).
@@ -150,7 +154,7 @@ export default function App() {
             {notes.map((n) => (
               <li key={n.id} className="card note" onClick={() => setEditing(n)}>
                 <h3>{n.title || <em>Untitled</em>}</h3>
-                <p className="snip">{(n.body || '').slice(0, 140) || <span className="faint">No text yet</span>}</p>
+                <p className="snip">{blocksToText(n.body).slice(0, 140) || <span className="faint">No text yet</span>}</p>
                 <div className="meta">
                   {(n.attachments || []).length > 0 && <span className="chip">📎 {n.attachments.length}</span>}
                   {n.tags.map((t) => <span key={t} className="chip grain">#{t}</span>)}
@@ -189,12 +193,16 @@ export default function App() {
       </nav>
 
       {editing && (
-        <NoteEditor
-          item={editing}
-          engine={engine}
-          saveItem={saveItem}
-          onClose={() => { setEditing(null); refresh(); }}
-        />
+        <React.Suspense fallback={<div className="overlay"><div className="panel"><p className="lead">Loading editor…</p></div></div>}>
+          <NoteEditor
+            item={editing}
+            store={store}
+            engine={engine}
+            saveItem={saveItem}
+            mode={mode}
+            onClose={() => { setEditing(null); refresh(); }}
+          />
+        </React.Suspense>
       )}
     </div>
   );
@@ -434,86 +442,6 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
         No accounts of ours, no analytics. Named for the Sumerian goddess of writing.
       </div>
     </main>
-  );
-}
-
-function NoteEditor({ item, engine, saveItem, onClose }) {
-  const [title, setTitle] = useState(item.title);
-  const [body, setBody] = useState(item.body);
-  const [tags, setTags] = useState(item.tags.join(', '));
-  const [attachments, setAttachments] = useState(item.attachments || []);
-  const [thumbs, setThumbs] = useState({});
-
-  useEffect(() => {
-    let dead = false;
-    const urls = [];
-    (async () => {
-      for (const att of attachments) {
-        if (thumbs[att.id]) continue;
-        const blob = await (engine ? engine.ensureBlob(att.id) : store.getBlob(att.id));
-        if (blob && !dead) {
-          const url = URL.createObjectURL(blob);
-          urls.push(url);
-          setThumbs((t) => ({ ...t, [att.id]: url }));
-        }
-      }
-    })();
-    return () => { dead = true; urls.forEach((u) => URL.revokeObjectURL(u)); };
-  }, [attachments]);
-
-  async function attachFiles(files) {
-    const next = [...attachments];
-    for (const file of files) {
-      const attId = crypto.randomUUID();
-      await store.putBlob(attId, file);
-      next.push({ id: attId, name: file.name || 'pasted.png', mime: file.type });
-    }
-    setAttachments(next);
-    await saveItem({ id: item.id, attachments: next });
-  }
-
-  async function close() {
-    const parsedTags = tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean);
-    const changed = title !== item.title || body !== item.body || JSON.stringify(parsedTags) !== JSON.stringify(item.tags);
-    if (changed) await saveItem({ id: item.id, title, body, tags: parsedTags });
-    onClose();
-  }
-
-  return (
-    <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <div className="panel">
-        <input className="editor-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" autoFocus />
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onPaste={(e) => {
-            const images = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
-            if (images.length) { e.preventDefault(); attachFiles(images); }
-          }}
-          placeholder="Write your note… (paste screenshots directly)"
-        />
-        <input className="tag-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" />
-        {attachments.length > 0 && (
-          <div className="thumbs">
-            {attachments.map((att) => (
-              <figure key={att.id}>
-                {thumbs[att.id] ? <img src={thumbs[att.id]} alt={att.name} /> : <span className="lead">loading…</span>}
-                <figcaption>{att.name}</figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
-        <div className="row">
-          <label className="file-btn">
-            📎 Attach
-            <input type="file" accept="image/*" multiple hidden onChange={(e) => attachFiles([...e.target.files])} />
-          </label>
-          <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
-          <span className="spacer" />
-          <button className="btn accent" onClick={close}>Done</button>
-        </div>
-      </div>
-    </div>
   );
 }
 

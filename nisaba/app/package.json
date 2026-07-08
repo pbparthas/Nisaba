@@ -14,6 +14,9 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@blocknote/core": "^0.51.4",
+    "@blocknote/mantine": "^0.51.4",
+    "@blocknote/react": "^0.51.4",
     "@fontsource/great-vibes": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/sacramento": "^5.2.8",

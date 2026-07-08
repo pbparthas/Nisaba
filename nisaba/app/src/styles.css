@@ -76,22 +76,20 @@ input, textarea, button { font-family: inherit; }
   padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top));
   display: flex; align-items: center; gap: 10px;
 }
-.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); }
-/* Size-aware wordmark: a monoline script (Sacramento) reads at header size;
-   the high-contrast display script (Great Vibes) is used large on setup; below
-   the header the mark alone carries the identity (favicon / app icon). The
-   text-stroke adds a little weight (the raw scripts read too light) and the
-   translate optically centres the script against the mark. */
+.brand { display: flex; align-items: center; gap: 3px; text-decoration: none; color: var(--ink); }
+/* Great Vibes script wordmark at both sizes; the text-stroke gives it weight
+   (the raw script reads too light). Script fonts reserve a lot of box below
+   the baseline for their descender flourishes, which pushes the visible
+   letters up — so the wordmark is nudged DOWN to sit its x-height band on the
+   mark's optical centre. Below the header the mark alone carries the identity
+   (favicon / app icon), so small pixels never rely on the script. */
 .brand .word {
-  font-family: "Sacramento", cursive; font-weight: 400;
-  font-size: 33px; line-height: 1;
-  -webkit-text-stroke: 0.7px currentColor;
-  transform: translateY(-1px);
+  font-family: "Great Vibes", cursive; font-weight: 400;
+  font-size: 34px; line-height: 1;
+  -webkit-text-stroke: 0.5px currentColor;
+  transform: translateY(5px);
 }
-.brand .word.big {
-  font-family: "Great Vibes", cursive; font-size: 52px;
-  -webkit-text-stroke: 0.5px currentColor; transform: translateY(-3px);
-}
+.brand .word.big { font-size: 54px; transform: translateY(8px); }
 .logo { display: block; flex: none; }
 .hdr .spacer { flex: 1; }
 .status {
@@ -333,6 +331,15 @@ input, textarea, button { font-family: inherit; }
   min-height: 38dvh; font-size: 15px; line-height: 1.55; padding: 0;
 }
 .panel textarea:focus { outline: none; }
+/* BlockNote editor — blend it into the paper/dark sheet. */
+.bn-wrap { min-height: 40dvh; }
+.bn-wrap .bn-container {
+  --bn-colors-editor-background: transparent;
+  --bn-colors-editor-text: var(--ink);
+  --bn-font-family: "Inter", system-ui, sans-serif;
+  background: transparent;
+}
+.bn-wrap .bn-editor { padding-inline: 0; }
 .tag-input {
   border: none; background: none; color: var(--muted); font-size: 13px;
   border-top: 1px solid var(--line); padding: 10px 0 0;

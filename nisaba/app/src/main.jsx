@@ -8,7 +8,6 @@ import '@fontsource/inter/700.css';
 import '@fontsource/saira-condensed/600.css';
 import '@fontsource/saira-condensed/800.css';
 import '@fontsource/great-vibes/400.css';
-import '@fontsource/sacramento/400.css';
 
 import App from './App.jsx';
 import './styles.css';
