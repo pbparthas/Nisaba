@@ -417,6 +417,8 @@ input, textarea, button { font-family: inherit; }
 .font-dd-btn .chev { flex: none; }
 .font-dd-menu button .fname { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-family: "Inter", sans-serif; }
 .font-dd-menu button.on .fname { color: var(--accent); }
+/* ink-swatch rows reuse the same dropdown shell */
+.dd-ink { display: inline-flex; align-items: center; gap: 9px; font-size: 15px; }
 
 .toggle { display: flex; gap: 8px; }
 .toggle button {

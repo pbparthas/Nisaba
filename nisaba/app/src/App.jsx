@@ -540,9 +540,9 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem, selMode, select
   );
 }
 
-// Collapsed dropdown for the note font — each row (and the current value) is
-// rendered in its own face, so the many decorative options don't fill the page.
-function FontPicker({ value, onChange }) {
+// Collapsed dropdown used for the long note-text option lists (font, colour) so
+// they don't fill the Settings page. Closes on outside-click / Escape.
+function Dropdown({ trigger, children }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -553,25 +553,47 @@ function FontPicker({ value, onChange }) {
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [open]);
-  const current = NOTE_FONT_OPTIONS.find(([k]) => k === value) || NOTE_FONT_OPTIONS[0];
   return (
     <div className="font-dd" ref={ref}>
       <button className="font-dd-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
-        <span style={{ fontFamily: NOTE_FONTS[current[0]] }}>{current[1]}</span>
-        <span className="chev">{open ? '▲' : '▼'}</span>
+        {trigger}<span className="chev">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div className="font-dd-menu" role="listbox">
-          {NOTE_FONT_OPTIONS.map(([k, l]) => (
-            <button key={k} role="option" aria-selected={value === k} className={value === k ? 'on' : ''}
-              onClick={() => { onChange(k); setOpen(false); }}>
-              <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>
-              <span className="fname">{l}</span>
-            </button>
-          ))}
-        </div>
+        <div className="font-dd-menu" role="listbox" onClick={() => setOpen(false)}>{children}</div>
       )}
     </div>
+  );
+}
+
+// Note font — the trigger and each row render in their own face.
+function FontPicker({ value, onChange }) {
+  const current = NOTE_FONT_OPTIONS.find(([k]) => k === value) || NOTE_FONT_OPTIONS[0];
+  return (
+    <Dropdown trigger={<span style={{ fontFamily: NOTE_FONTS[current[0]] }}>{current[1]}</span>}>
+      {NOTE_FONT_OPTIONS.map(([k, l]) => (
+        <button key={k} role="option" aria-selected={value === k} className={value === k ? 'on' : ''}
+          onClick={() => onChange(k)}>
+          <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>
+          <span className="fname">{l}</span>
+        </button>
+      ))}
+    </Dropdown>
+  );
+}
+
+// Note text colour — each row shows its ink swatch.
+function InkPicker({ value, onChange }) {
+  const current = NOTE_INK_OPTIONS.find(([k]) => k === value) || NOTE_INK_OPTIONS[0];
+  const swatch = (k, l) => <span className="dd-ink"><span className="ink-dot" data-ink={k} />{l}</span>;
+  return (
+    <Dropdown trigger={swatch(current[0], current[1])}>
+      {NOTE_INK_OPTIONS.map(([k, l]) => (
+        <button key={k} role="option" aria-selected={value === k} className={value === k ? 'on' : ''}
+          onClick={() => onChange(k)}>
+          {swatch(k, l)}
+        </button>
+      ))}
+    </Dropdown>
   );
 }
 
@@ -648,13 +670,7 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
         </div>
         <div className="pref">
           <label>Colour</label>
-          <div className="ink-row">
-            {NOTE_INK_OPTIONS.map(([k, label]) => (
-              <button key={k} className={'ink-chip' + (prefs.ink === k ? ' on' : '')} onClick={() => updatePref('ink', k)}>
-                <span className="ink-dot" data-ink={k} />{label}
-              </button>
-            ))}
-          </div>
+          <InkPicker value={prefs.ink} onChange={(k) => updatePref('ink', k)} />
         </div>
         <p className="lead" style={{ marginTop: 12 }}>Applies to all note text. Each note's background colour is set inside the note.</p>
       </div>
