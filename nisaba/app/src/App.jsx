@@ -713,7 +713,7 @@ function SignInScreen({ onSignIn, onSkip, status }) {
         >
           {busy ? 'Connecting…' : <><GoogleG /> Continue with Google</>}
         </button>
-        {failed && <p className="error" style={{ textAlign: 'center' }}>Sign-in didn’t complete — try again.</p>}
+        {failed && <p className="error" style={{ textAlign: 'center' }}>{status.replace(/^sign-in failed:\s*/, '') || 'Sign-in didn’t complete — try again.'}</p>}
         <button className="btn ghost" onClick={onSkip}>Use without signing in</button>
         <p className="signin-note">Nisaba syncs only through your own Drive — no server of ours ever sees your notes. You can connect later from Settings.</p>
       </div>
