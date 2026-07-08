@@ -8,3 +8,10 @@ desktop/src-tauri/target/
 desktop/src-tauri/gen/
 # Compiled service sidecar (produced by build:bundled)
 desktop/src-tauri/binaries/
+
+# Internal process docs — kept on disk / in the handoff-doc-review branch,
+# not tracked on main. (GOOGLE_SETUP.md stays tracked.)
+docs/HANDOFF.md
+docs/PLAN.md
+docs/RESEARCH.md
+docs/REVIEW-FINDINGS.md

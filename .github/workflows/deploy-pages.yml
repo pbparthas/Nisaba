@@ -2,7 +2,7 @@ name: Deploy Nisaba to GitHub Pages
 
 on:
   push:
-    branches: [claude/cross-platform-sync-app-wsoso4]
+    branches: [main]
     paths: ['nisaba/**', '.github/workflows/deploy-pages.yml']
   workflow_dispatch:
 
