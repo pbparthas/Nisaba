@@ -22,6 +22,7 @@ import App from './App.jsx';
 import './styles.css';
 import { getMode, applyMode } from './lib/theme.js';
 import { applyNotePrefs } from './lib/notePrefs.js';
+import './lib/pwaInstall.js'; // registers the install-prompt capture before the browser fires it
 
 // Apply saved appearance + note typography before first paint.
 applyMode(getMode());

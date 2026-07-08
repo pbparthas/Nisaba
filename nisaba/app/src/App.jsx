@@ -10,6 +10,7 @@ import {
   getNoteFont, getNoteSize, getNoteWeight, getNoteStyle, getNoteInk, setNotePref,
   NOTE_FONTS, NOTE_FONT_OPTIONS, NOTE_SIZE_OPTIONS, NOTE_WEIGHT_OPTIONS, NOTE_STYLE_OPTIONS, NOTE_INK_OPTIONS,
 } from './lib/notePrefs.js';
+import { canInstall, wasInstalled, isStandalone, isIOS, subscribeInstall, promptInstall } from './lib/pwaInstall.js';
 
 const store = createIdbStore();
 
@@ -540,7 +541,11 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem, selMode, select
 }
 
 function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
-  const [install, setInstall] = useState(null); // captured beforeinstallprompt event
+  // Install state comes from the app-wide capture (lib/pwaInstall) so it's known
+  // even though the browser fired beforeinstallprompt before this screen mounted.
+  const [, bumpInstall] = useState(0);
+  const installed = wasInstalled() || isStandalone();
+  const installable = canInstall();
   const [prefs, setPrefs] = useState(() => ({
     font: getNoteFont(), size: getNoteSize(), weight: getNoteWeight(), style: getNoteStyle(), ink: getNoteInk(),
   }));
@@ -558,8 +563,7 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
   const [storage, setStorage] = useState(null); // { persisted, usedMB }
 
   useEffect(() => {
-    const onPrompt = (e) => { e.preventDefault(); setInstall(e); };
-    window.addEventListener('beforeinstallprompt', onPrompt);
+    const unsub = subscribeInstall(() => bumpInstall((n) => n + 1)); // re-render on install-state change
     (async () => {
       try {
         const persisted = navigator.storage?.persisted ? await navigator.storage.persisted() : null;
@@ -567,7 +571,7 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
         setStorage({ persisted, usedMB: est?.usage ? (est.usage / 1048576).toFixed(1) : null });
       } catch { /* unsupported */ }
     })();
-    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+    return unsub;
   }, []);
 
   async function keepData() {
@@ -644,17 +648,32 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
           <span className="val">{itemCount} item{itemCount === 1 ? '' : 's'}{storage?.usedMB ? ` · ${storage.usedMB} MB` : ''}</span>
         </div>
         <div className="set-row">
+          <span>Install app</span>
+          <span className={'status-pill' + (installed ? '' : ' off')} style={{ marginLeft: 'auto' }}>
+            {installed ? 'installed' : installable ? 'ready' : 'in browser'}
+          </span>
+        </div>
+        <div className="set-row">
           <span>Offline copy</span>
           <span className={'status-pill' + (storage?.persisted ? '' : ' off')} style={{ marginLeft: 'auto' }}>
             {storage?.persisted ? 'kept' : storage?.persisted === false ? 'best-effort' : '—'}
           </span>
         </div>
         <div className="btn-row">
-          {install && <button className="btn accent" onClick={async () => { install.prompt(); await install.userChoice; setInstall(null); }}>📲 Install app</button>}
+          {!installed && installable && (
+            <button className="btn accent" onClick={() => promptInstall()}>📲 Install app</button>
+          )}
           {storage?.persisted === false && <button className="btn" onClick={keepData}>Keep data on device</button>}
         </div>
+        {!installed && !installable && (
+          <p className="lead" style={{ marginTop: 12 }}>
+            {isIOS()
+              ? 'To install: tap the Share icon in Safari, then “Add to Home Screen”.'
+              : 'Your browser didn’t offer an automatic install. In Chrome or Edge, open the ⋮ menu and choose “Install app”, or tap the install icon in the address bar.'}
+          </p>
+        )}
         <p className="lead" style={{ marginTop: 12 }}>
-          Works offline once installed. {install ? '' : 'Add to your home screen from the browser menu to install. '}
+          {installed ? 'Installed — runs offline and opens like its own app. ' : 'Works offline once installed. '}
           Your notes stay on this device and in your Drive.
         </p>
       </div>
