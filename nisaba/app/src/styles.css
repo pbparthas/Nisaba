@@ -519,12 +519,28 @@ input, textarea, button { font-family: inherit; }
 }
 
 /* per-note colour swatch picker (in the editor) */
-.swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 4px 0; }
 .swatch {
   width: 26px; height: 26px; border-radius: 50%; cursor: pointer; flex: none;
   border: 1.5px solid var(--line); padding: 0;
 }
 .swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash); }
+.swatch.sm { width: 20px; height: 20px; border-width: 1px; }
+
+/* Note colour: a compact pill that opens a palette popover (opens upward). */
+.color-pop { position: relative; display: inline-block; padding: 4px 0; }
+.color-trigger {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 7px;
+  font-size: 13px; font-weight: 600;
+}
+.color-trigger .chev { color: var(--muted); font-size: 10px; }
+.color-menu {
+  position: absolute; z-index: 40; bottom: calc(100% + 8px); left: 0;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 11px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2); padding: 13px; width: max-content;
+}
 .tag-input {
   border: none; background: none; color: var(--muted); font-size: 13px;
   border-top: 1px solid var(--line); padding: 10px 0 0;

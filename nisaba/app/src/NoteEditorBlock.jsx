@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
@@ -13,6 +13,47 @@ import { NOTE_COLORS } from './lib/notePrefs.js';
 
    Existing notes open READ-ONLY (no keyboard) with an Edit button; only a
    freshly created note (item._new) opens straight into edit mode. */
+
+// A small "Colour" pill that opens a tidy popover palette (grid of swatches),
+// so the 14 background colours don't sprawl across the editor. Opens upward
+// (it sits near the bottom) and closes on outside-click / Escape.
+function ColorPopover({ color, onPick }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const current = NOTE_COLORS.find(([k]) => k === color) || NOTE_COLORS[0];
+  return (
+    <div className="color-pop" ref={ref}>
+      <button type="button" className="color-trigger" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open}>
+        <span className="swatch sm" style={{ background: current[1] }} />
+        <span>Colour</span>
+        <span className="chev">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="color-menu" role="listbox" aria-label="Note colour">
+          {NOTE_COLORS.map(([key, preview]) => (
+            <button
+              type="button"
+              key={key}
+              className={'swatch' + (color === key ? ' on' : '')}
+              style={{ background: preview }}
+              aria-label={key}
+              aria-pressed={color === key}
+              onClick={() => { onPick(key); setOpen(false); }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function NoteEditorBlock({ item, store, engine, saveItem, mode, onClose }) {
   const [title, setTitle] = useState(item.title);
@@ -74,18 +115,7 @@ export default function NoteEditorBlock({ item, store, engine, saveItem, mode, o
 
         {editMode ? (
           <>
-            <div className="swatches" aria-label="Note colour">
-              {NOTE_COLORS.map(([key, preview]) => (
-                <button
-                  key={key}
-                  className={'swatch' + (color === key ? ' on' : '')}
-                  style={{ background: preview }}
-                  aria-label={key}
-                  aria-pressed={color === key}
-                  onClick={() => pickColor(key)}
-                />
-              ))}
-            </div>
+            <ColorPopover color={color} onPick={pickColor} />
             <input className="tag-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" />
             <div className="row">
               <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
