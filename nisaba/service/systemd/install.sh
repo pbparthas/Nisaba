@@ -37,8 +37,10 @@ WorkingDirectory=$SERVICE_DIR
 ExecStart=$NODE_BIN $SERVICE_DIR/src/main.js
 Restart=on-failure
 RestartSec=5
-# Keep the API on localhost only.
 Environment=NISABA_PORT=27125
+# Bind host: localhost by default. Set NISABA_HOST=0.0.0.0 before running this
+# script to also serve over the Tailscale interface (mobile reach).
+Environment=NISABA_HOST=${NISABA_HOST:-127.0.0.1}
 
 [Install]
 WantedBy=default.target

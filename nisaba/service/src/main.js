@@ -21,6 +21,10 @@ import { createApi } from './api.js';
 import { createServer } from './server.js';
 
 const PORT = Number(process.env.NISABA_PORT) || 27125;
+// Bind address. Default localhost-only (secure). Set NISABA_HOST=0.0.0.0 to also
+// listen on the Tailscale interface so mobile Claude can reach it over the
+// tailnet — every endpoint except /ping still requires the bearer token.
+const HOST = process.env.NISABA_HOST || '127.0.0.1';
 const WORKER_URL = process.env.NISABA_WORKER_URL || 'https://auth.orionforge.dev';
 const CLIENT_ID = process.env.NISABA_CLIENT_ID || '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
 const DATA_DIR = process.env.NISABA_DATA_DIR || path.join(os.homedir(), '.local', 'share', 'nisaba');
@@ -71,8 +75,8 @@ async function main() {
     token,
     hooks: { oauthCallback: (url) => auth.completeCallback(url) },
   });
-  await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
-  console.log(`Nisaba service listening on http://127.0.0.1:${PORT}`);
+  await new Promise((r) => server.listen(PORT, HOST, r));
+  console.log(`Nisaba service listening on http://${HOST}:${PORT}`);
 
   if (!(await auth.isSignedIn())) {
     console.log('Not connected to Google Drive yet — starting sign-in…');

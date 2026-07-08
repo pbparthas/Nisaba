@@ -86,6 +86,45 @@ The API stays on localhost — it is only reachable from this laptop, not your
 phone. Making it reachable from mobile Claude means putting it behind a network
 (Tailscale/VPN) or deploying it to a server — a separate security decision.
 
+### Reach it from your phone (Tailscale)
+So mobile Claude can use the `nisaba` tools, put both devices on one private
+[Tailscale](https://tailscale.com) tailnet and have the service listen on that
+interface. Your laptop stays the host — nothing is exposed to the public
+internet.
+
+1. **Install Tailscale** on the laptop and phone, signed into the same account:
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh   # laptop
+   sudo tailscale up
+   ```
+   Install the Tailscale app on the phone and sign in the same way.
+2. **Find the laptop's tailnet name/IP:**
+   ```bash
+   tailscale ip -4          # e.g. 100.101.102.103
+   tailscale status         # shows the MagicDNS name, e.g. partha-tp-e14.tailXXXX.ts.net
+   ```
+3. **Let the service listen on the tailnet.** Reinstall the unit with the bind
+   host opened up (it still serves localhost too, so sign-in keeps working):
+   ```bash
+   NISABA_HOST=0.0.0.0 bash systemd/install.sh
+   systemctl --user restart nisaba.service
+   ```
+   `0.0.0.0` = all interfaces (localhost + Tailscale). Every endpoint except
+   `/ping` still needs the bearer token, and only devices on your tailnet can
+   route to it — but if you're ever on an untrusted LAN, that network can also
+   reach the port, so treat the bearer token as the real guard.
+4. **Point mobile Claude at it.** In the phone's Claude Code, using the laptop's
+   MagicDNS name (nicer than the IP):
+   ```bash
+   claude mcp add nisaba --transport http \
+     http://<laptop-name>.<tailnet>.ts.net:27125/mcp \
+     --header "Authorization: Bearer <TOKEN>"
+   ```
+   (`<TOKEN>` is the same one in `~/.config/nisaba/service.json` on the laptop.)
+
+Test from the phone: `curl http://<laptop-name>.<tailnet>.ts.net:27125/ping`
+should return the service JSON when both devices are on the tailnet.
+
 ## Configuration (env vars)
 
 | var | default | meaning |
