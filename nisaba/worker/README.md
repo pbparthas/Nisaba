@@ -48,10 +48,11 @@ Domains & Routes → Add → Custom Domain →** `auth.orionforge.dev`.
 Cloudflare creates the DNS record automatically.
 
 ### 7. Turn it on in the app
-Tell me it's live and I'll set `AUTH_WORKER_DEFAULT = 'https://auth.orionforge.dev'`
-in `app/src/lib/auth.js` and redeploy. (To try it before that, on the site run
-`localStorage.setItem('ns_auth_worker','https://auth.orionforge.dev')` in the
-browser console and reload — sign in once, and you should stay signed in.)
+Done — `AUTH_WORKER_DEFAULT = 'https://auth.orionforge.dev'` is set in
+`app/src/lib/auth.js`, so every user gets persistent login by default. To point
+at a *different* broker without a rebuild, run
+`localStorage.setItem('ns_auth_worker','https://your-worker')` in the browser
+console; clear it with `localStorage.removeItem('ns_auth_worker')`.
 
 ## Notes
 - The **first** connection must grant consent so Google issues a refresh token;

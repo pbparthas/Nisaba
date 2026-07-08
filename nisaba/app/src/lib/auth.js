@@ -16,7 +16,7 @@ const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 // Point this at the deployed Worker (e.g. 'https://auth.orionforge.dev') to
 // switch the whole app to the persistent-login backend. Empty = token mode.
-const AUTH_WORKER_DEFAULT = '';
+const AUTH_WORKER_DEFAULT = 'https://auth.orionforge.dev';
 function workerUrl() {
   try { return localStorage.getItem('ns_auth_worker') || AUTH_WORKER_DEFAULT; } catch { return AUTH_WORKER_DEFAULT; }
 }
