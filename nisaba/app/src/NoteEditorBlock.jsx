@@ -118,7 +118,7 @@ export default function NoteEditorBlock({ item, store, engine, saveItem, mode, o
             <ColorPopover color={color} onPick={pickColor} />
             <input className="tag-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" />
             <div className="row">
-              <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
+              <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true, deleted_at: Date.now() }); onClose(); }}>Delete</button>
               <span className="spacer" />
               <button className="btn accent" onClick={saveAndClose}>Done</button>
             </div>
@@ -131,7 +131,7 @@ export default function NoteEditorBlock({ item, store, engine, saveItem, mode, o
               </div>
             )}
             <div className="row">
-              <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
+              <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true, deleted_at: Date.now() }); onClose(); }}>Delete</button>
               <span className="spacer" />
               <button className="btn" onClick={onClose}>Close</button>
               <button className="btn accent" onClick={() => setEditMode(true)}>✎ Edit</button>

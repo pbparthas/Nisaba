@@ -160,6 +160,16 @@ export function createDriveClient({ getToken, baseUrl = 'https://www.googleapis.
       return res.blob();
     },
 
+    // Permanently delete a Drive file (item JSON or attachment). Swallows 404 —
+    // another device's GC may have already removed it. Used by the GC pass.
+    async deleteFile(fileId) {
+      try {
+        await call(`/drive/v3/files/${fileId}`, { method: 'DELETE', raw: true });
+      } catch (e) {
+        if (!/: 404\b/.test(String(e.message))) throw e;
+      }
+    },
+
     async getUserEmail() {
       const data = await call('/drive/v3/about', { query: { fields: 'user(emailAddress)' } });
       return data.user.emailAddress;

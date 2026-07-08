@@ -169,7 +169,7 @@ export function createApi({ store, getToken, getAccessToken, driveBaseUrl, onSta
     async deleteItem(id) {
       const i = await store.getItem(id);
       if (!i) throw notFound(id);
-      await save({ ...i, deleted: true });
+      await save({ ...i, deleted: true, deleted_at: Date.now() });
       return { id, deleted: true };
     },
 

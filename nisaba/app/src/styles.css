@@ -355,6 +355,16 @@ input, textarea, button { font-family: inherit; }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 14px; }
 .set-row + .set-row { border-top: 1px solid var(--line); }
 .set-row .val { margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; }
+.set-row-btn { width: 100%; background: none; border: 0; cursor: pointer; color: var(--ink); text-align: left; border-top: 1px solid var(--line); }
+
+/* Trash screen (overlay) */
+.trash-panel { max-height: 88vh; overflow-y: auto; }
+.trash-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.trash-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.trash-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.trash-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trash-meta { font-size: 12px; color: var(--muted); }
+.btn.small { min-height: 34px; padding: 6px 12px; font-size: 13px; }
 /* grouped note-text preference list */
 .pref { padding: 12px 0; }
 .pref + .pref { border-top: 1px solid var(--line); }

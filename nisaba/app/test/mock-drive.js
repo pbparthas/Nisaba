@@ -64,6 +64,13 @@ export function startMockDrive() {
         }
         return json({ id: f.id, version: String(f.version) });
       }
+      // files.delete
+      if (req.method === 'DELETE' && getMatch) {
+        if (!files.has(getMatch[1])) return json({ error: 'not found' }, 404);
+        files.delete(getMatch[1]);
+        res.writeHead(204);
+        return res.end();
+      }
       // create folder (JSON POST)
       if (req.method === 'POST' && url.pathname === '/drive/v3/files') {
         const meta = JSON.parse(body.toString());

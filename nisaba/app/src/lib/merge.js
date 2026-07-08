@@ -54,6 +54,7 @@ export function newItem(partial) {
     attachments: [], // [{id, name, mime}] — binary lives in Drive attachments/
     color: null, // per-note background palette key
     deleted: false,
+    deleted_at: null, // when tombstoned — drives Trash retention + GC compaction
     created_at: Date.now(),
     updated_at: Date.now(),
     ...partial,

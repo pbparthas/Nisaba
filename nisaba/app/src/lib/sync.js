@@ -10,6 +10,8 @@
 import { resolveItem } from './merge.js';
 
 const SNAPSHOT_KEEP = 5;
+const RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // deleted items sit in Trash 30 days
+const GC_THROTTLE_MS = 6 * 60 * 60 * 1000;     // background GC runs at most this often
 
 export function createSyncEngine({ store, drive, onStatus = () => {} }) {
   let running = false;
@@ -62,6 +64,42 @@ export function createSyncEngine({ store, drive, onStatus = () => {} }) {
     await reconcileAttachments(await store.allItems());
   }
 
+  // Garbage-collect: permanently remove tombstones past the Trash retention
+  // window (or an explicit purge set) and free any attachment no longer
+  // referenced by a surviving item — locally and in Drive. Compaction only
+  // drops the local item once its Drive file is actually gone, so local and
+  // Drive can't disagree (avoids a purged tombstone getting re-pulled).
+  async function gcOnce(purgeIds) {
+    const items = await store.allItems();
+    const known = (await store.getMeta('driveVersions')) || {};
+    const now = Date.now();
+    const nextKnown = { ...known };
+    const remaining = [];
+
+    for (const item of items) {
+      const pastRetention = now - (item.deleted_at || item.updated_at) >= RETENTION_MS;
+      const purge = item.deleted && (purgeIds ? purgeIds.has(item.id) : pastRetention);
+      if (!purge) { remaining.push(item); continue; }
+      const fileId = known[item.id]?.fileId;
+      // deleteFile swallows 404; a network error rejects → keep the item and
+      // retry next round so we never orphan the Drive tombstone.
+      const driveOk = fileId ? await drive.deleteFile(fileId).then(() => true).catch(() => false) : true;
+      if (driveOk) { await store.deleteItem(item.id); delete nextKnown[item.id]; }
+      else remaining.push(item);
+    }
+    await store.setMeta('driveVersions', nextKnown);
+
+    // Attachments still wanted by a surviving item (including trashed-but-not-
+    // yet-purged ones, so Restore keeps its images).
+    const wanted = new Set();
+    for (const item of remaining) for (const att of item.attachments || []) wanted.add(att.id);
+    for (const blobId of await store.blobIds()) if (!wanted.has(blobId)) await store.deleteBlob(blobId);
+    const remoteAtt = await drive.listAttachmentIds().catch(() => null);
+    if (remoteAtt) for (const [attId, fileId] of remoteAtt) if (!wanted.has(attId)) await drive.deleteFile(fileId).catch(() => {});
+
+    return { purged: items.length - remaining.length };
+  }
+
   // Upload any attachment blob we hold locally that Drive doesn't have yet.
   async function reconcileAttachments(items) {
     const wanted = new Map(); // attId -> {name}
@@ -102,6 +140,21 @@ export function createSyncEngine({ store, drive, onStatus = () => {} }) {
       clearTimeout(timer);
       timer = setTimeout(() => this.sync(), 1500);
     },
+
+    // Background compaction — best-effort, throttled. Call after a sync so the
+    // local replica reflects Drive (else attachment GC could race a not-yet-
+    // pulled item). RETENTION_MS is the Trash window.
+    async gc({ force = false } = {}) {
+      const last = Number(await store.getMeta('lastGc')) || 0;
+      if (!force && Date.now() - last < GC_THROTTLE_MS) return;
+      try { await gcOnce(null); await store.setMeta('lastGc', Date.now()); }
+      catch (e) { console.warn('gc failed:', e); }
+    },
+
+    // Immediately purge specific items ("delete forever" from Trash).
+    async purge(ids) { await gcOnce(new Set(ids)); },
+
+    retentionMs: RETENTION_MS,
 
     // Returns the attachment's blob, fetching (and caching) from Drive if
     // this device doesn't have it yet.

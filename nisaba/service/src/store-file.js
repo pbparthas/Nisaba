@@ -82,6 +82,10 @@ export function createFileStore(dir) {
       await ready;
       for (const i of list) await writeAtomic(itemFile(i.id), JSON.stringify(i));
     },
+    async deleteItem(id) {
+      await ready;
+      await fs.rm(itemFile(id), { force: true });
+    },
     async dirtyItems() {
       const items = await this.allItems();
       return items.filter((i) => i.dirty);
@@ -103,6 +107,11 @@ export function createFileStore(dir) {
         if (e.code === 'ENOENT') return undefined;
         throw e;
       }
+    },
+    async deleteBlob(id) {
+      await ready;
+      await fs.rm(blobFile(id), { force: true });
+      await fs.rm(`${blobFile(id)}.type`, { force: true });
     },
     async blobIds() {
       await ready;

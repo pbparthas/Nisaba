@@ -85,9 +85,10 @@ async function main() {
     catch (e) { console.error('Sign-in failed:', e.message); }
   }
 
-  // First pull, then keep the replica warm.
-  api.sync().catch((e) => console.warn('initial sync deferred:', e.message));
-  setInterval(() => api.sync().catch(() => {}), SYNC_INTERVAL_MS).unref();
+  // First pull, then keep the replica warm; compact (throttled) after each sync.
+  const tick = () => api.sync().then(() => api.engine.gc()).catch((e) => console.warn('sync/gc deferred:', e.message));
+  tick();
+  setInterval(tick, SYNC_INTERVAL_MS).unref();
 
   // Print the literal token only when it was just generated (or in debug) — on
   // routine starts it would otherwise land in journalctl/logs (L1).

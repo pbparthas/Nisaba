@@ -121,6 +121,8 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [status, setStatus] = useState('local only');
   const [items, setItems] = useState([]);
+  const [trash, setTrash] = useState([]); // soft-deleted items awaiting GC
+  const [showTrash, setShowTrash] = useState(false);
   const [tab, setTab] = useState('notes'); // 'notes' | 'tasks' | 'settings'
   const [editing, setEditing] = useState(null);
   const [mode, setMode] = useState(getMode);
@@ -143,9 +145,12 @@ export default function App() {
   });
   const goTab = (t) => { clearSel(); setQuery(''); setTab(t); };
   async function deleteSel() {
-    for (const id of selIds) await saveItem({ id, deleted: true });
+    for (const id of selIds) await saveItem({ id, deleted: true, deleted_at: Date.now() });
     clearSel();
   }
+  // Trash actions
+  const restoreItem = (id) => saveItem({ id, deleted: false, deleted_at: null });
+  async function purgeItems(ids) { await engine.purge(ids); await refresh(); }
 
   const { auth, engine } = useMemo(() => {
     if (!clientId) return {};
@@ -164,7 +169,9 @@ export default function App() {
   }, [clientId]);
 
   const refresh = useCallback(async () => {
-    setItems((await store.allItems()).filter((i) => !i.deleted));
+    const all = await store.allItems();
+    setItems(all.filter((i) => !i.deleted));
+    setTrash(all.filter((i) => i.deleted).sort((a, b) => (b.deleted_at || b.updated_at || 0) - (a.deleted_at || a.updated_at || 0)));
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -172,12 +179,13 @@ export default function App() {
   useEffect(() => {
     if (!auth?.isSignedIn()) return;
     setSignedIn(true);
-    engine.sync();
-    const t = setInterval(() => engine.sync(), 30000);
-    const onFocus = () => engine.sync();
-    window.addEventListener('focus', onFocus);
-    return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
-  }, [auth, engine]);
+    // Sync, then compact (throttled) so the local replica is current before GC.
+    const tick = () => engine.sync().then(() => engine.gc()).then(refresh).catch(() => {});
+    tick();
+    const t = setInterval(tick, 30000);
+    window.addEventListener('focus', tick);
+    return () => { clearInterval(t); window.removeEventListener('focus', tick); };
+  }, [auth, engine, refresh]);
 
   function setAppMode(m) { applyMode(m); setMode(m); }
 
@@ -275,6 +283,7 @@ export default function App() {
           signedIn={signedIn} status={status} statusKey={statusKey}
           onSignIn={signIn} onSignOut={signOut}
           itemCount={items.length}
+          trashCount={trash.length} onOpenTrash={() => setShowTrash(true)}
         />
       )}
 
@@ -300,6 +309,16 @@ export default function App() {
             </button>
           </div>
         </nav>
+      )}
+
+      {showTrash && (
+        <TrashScreen
+          items={trash}
+          retentionMs={engine?.retentionMs}
+          onRestore={restoreItem}
+          onPurge={purgeItems}
+          onClose={() => setShowTrash(false)}
+        />
       )}
 
       {editing && (
@@ -529,7 +548,7 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem, selMode, select
           </div>
           {menu && (
             <div className="menu" role="menu">
-              <button className="danger" onClick={() => { if (confirm('Delete this task?')) saveItem({ id: t.id, deleted: true }); setMenu(false); }}>
+              <button className="danger" onClick={() => { if (confirm('Delete this task?')) saveItem({ id: t.id, deleted: true, deleted_at: Date.now() }); setMenu(false); }}>
                 Delete task
               </button>
             </div>
@@ -597,7 +616,52 @@ function InkPicker({ value, onChange }) {
   );
 }
 
-function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
+// Trash: soft-deleted items, restorable until they age out of the retention
+// window (then GC removes them permanently and frees their storage).
+function TrashScreen({ items, retentionMs, onRestore, onPurge, onClose }) {
+  const days = Math.round((retentionMs || 30 * 86400000) / 86400000);
+  const now = Date.now();
+  const daysLeft = (it) => Math.max(0, days - Math.floor((now - (it.deleted_at || it.updated_at || now)) / 86400000));
+  return (
+    <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="panel trash-panel">
+        <div className="trash-head">
+          <button className="btn" onClick={onClose}>‹ Back</button>
+          <span className="eyebrow" style={{ margin: 0 }}>Trash</span>
+          <span className="spacer" />
+          {items.length > 0 && (
+            <button className="btn ghost" style={{ color: 'var(--overdue)' }}
+              onClick={() => { if (confirm(`Permanently delete all ${items.length} item${items.length > 1 ? 's' : ''}? This can't be undone.`)) onPurge(items.map((i) => i.id)); }}>
+              Empty
+            </button>
+          )}
+        </div>
+        <p className="lead" style={{ marginBottom: 12 }}>
+          Deleted items stay here for {days} days, then are permanently removed to free space. Restore anything before then.
+        </p>
+        {items.length === 0 ? (
+          <p className="empty">Trash is empty.</p>
+        ) : (
+          <ul className="list" style={{ listStyle: 'none' }}>
+            {items.map((it) => (
+              <li key={it.id} className="trash-row">
+                <div className="trash-info">
+                  <span className="trash-title">{it.title || (it.type === 'task' ? 'Untitled task' : 'Untitled note')}</span>
+                  <span className="trash-meta">{it.type === 'task' ? 'Task' : 'Note'} · {daysLeft(it)} day{daysLeft(it) === 1 ? '' : 's'} left</span>
+                </div>
+                <button className="btn small" onClick={() => onRestore(it.id)}>Restore</button>
+                <button className="btn small ghost" style={{ color: 'var(--overdue)' }}
+                  onClick={() => { if (confirm('Delete this forever? This can’t be undone.')) onPurge([it.id]); }}>Delete</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount, trashCount, onOpenTrash }) {
   // Install state comes from the app-wide capture (lib/pwaInstall) so it's known
   // even though the browser fired beforeinstallprompt before this screen mounted.
   const [, bumpInstall] = useState(0);
@@ -698,6 +762,10 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
           <span>On this device</span>
           <span className="val">{itemCount} item{itemCount === 1 ? '' : 's'}{storage?.usedMB ? ` · ${storage.usedMB} MB` : ''}</span>
         </div>
+        <button className="set-row set-row-btn" onClick={onOpenTrash}>
+          <span>🗑 Trash</span>
+          <span className="val">{trashCount || 0} item{trashCount === 1 ? '' : 's'} ›</span>
+        </button>
         <div className="set-row">
           <span>Install app</span>
           <span className={'status-pill' + (installed ? '' : ' off')} style={{ marginLeft: 'auto' }}>
