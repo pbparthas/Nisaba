@@ -8,12 +8,22 @@
 //                                              doesn't merit a duplicate task)
 //   - equal timestamps                      -> remote wins so devices converge
 
+// Note bodies are BlockNote block trees (objects) since phase 2, so they must
+// be compared by value — a reference compare (older.body !== newer.body) is
+// always true for two structurally-identical trees, which turned every edit
+// pulled back from Drive into a spurious "(conflict copy)". Empty forms
+// (null / '' / []) all count as equal.
+function bodyEqual(a, b) {
+  const norm = (x) => (x == null || x === '' ? '' : typeof x === 'string' ? x : JSON.stringify(x));
+  return norm(a) === norm(b);
+}
+
 export function resolveItem(remote, local) {
   if (!local || !local.dirty) return { winner: remote, conflictCopy: null };
 
   const [newer, older] = local.updated_at > remote.updated_at ? [local, remote] : [remote, local];
   const contentDiffers =
-    older.title !== newer.title || older.body !== newer.body ||
+    older.title !== newer.title || !bodyEqual(older.body, newer.body) ||
     JSON.stringify(older.tags) !== JSON.stringify(newer.tags);
 
   const conflictCopy =

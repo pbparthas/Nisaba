@@ -77,12 +77,12 @@ export function createDriveClient({ getToken, baseUrl = 'https://www.googleapis.
     if (existingFileId) {
       const { body, headers } = multipart({}, json, 'application/json');
       return call(`/upload/drive/v3/files/${existingFileId}`, {
-        method: 'PATCH', query: { uploadType: 'multipart', fields: 'id, version' }, body, headers,
+        method: 'PATCH', query: { uploadType: 'multipart', fields: 'id, md5Checksum, version' }, body, headers,
       });
     }
     const { body, headers } = multipart({ name, parents: [parentId] }, json, 'application/json');
     return call('/upload/drive/v3/files', {
-      method: 'POST', query: { uploadType: 'multipart', fields: 'id, version' }, body, headers,
+      method: 'POST', query: { uploadType: 'multipart', fields: 'id, md5Checksum, version' }, body, headers,
     });
   }
 
@@ -115,11 +115,14 @@ export function createDriveClient({ getToken, baseUrl = 'https://www.googleapis.
       await this.ensureSetup();
       const files = await list(
         `'${itemsFolderId}' in parents and trashed = false`,
-        'files(id, name, version)'
+        'files(id, name, md5Checksum, version)'
       );
       const map = new Map();
       for (const f of files) {
-        if (f.name.endsWith('.json')) map.set(f.name.slice(0, -5), { fileId: f.id, version: String(f.version) });
+        // Prefer the content hash (stable — only moves when the bytes change)
+        // over Drive's `version` field, which Drive bumps on its own after an
+        // upload and would otherwise re-trigger a pull + spurious conflict copy.
+        if (f.name.endsWith('.json')) map.set(f.name.slice(0, -5), { fileId: f.id, version: String(f.md5Checksum || f.version) });
       }
       return map;
     },
@@ -131,7 +134,7 @@ export function createDriveClient({ getToken, baseUrl = 'https://www.googleapis.
     async uploadItem(item, existingFileId) {
       await this.ensureSetup();
       const data = await uploadJson(`${item.id}.json`, itemsFolderId, item, existingFileId);
-      return { fileId: data.id, version: String(data.version) };
+      return { fileId: data.id, version: String(data.md5Checksum || data.version) };
     },
 
     async uploadAttachment(attId, name, blob) {

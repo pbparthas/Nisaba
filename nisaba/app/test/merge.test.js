@@ -40,6 +40,15 @@ describe('resolveItem', () => {
     expect(resolveItem(remote, local).conflictCopy).toBeNull();
   });
 
+  it('block-object bodies are compared by value, not reference (no spurious copy)', () => {
+    // Two structurally-identical BlockNote trees are never === — a reference
+    // compare made every edit pulled back from Drive a "(conflict copy)".
+    const blocks = () => [{ type: 'paragraph', content: [{ type: 'text', text: 'hi', styles: {} }] }];
+    const remote = note({ body: blocks(), updated_at: 300 });
+    const local = note({ body: blocks(), updated_at: 200, dirty: 1 });
+    expect(resolveItem(remote, local).conflictCopy).toBeNull();
+  });
+
   it('tasks never produce conflict copies — newer just wins', () => {
     const remote = note({ type: 'task', title: 'remote', updated_at: 300 });
     const local = note({ type: 'task', title: 'local', updated_at: 200, dirty: 1 });
