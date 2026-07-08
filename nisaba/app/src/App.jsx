@@ -13,13 +13,30 @@ const store = createIdbStore();
 // stores the override in localStorage.
 const DEFAULT_CLIENT_ID = '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
 
+function Logo() {
+  return (
+    <svg className="logo" viewBox="0 0 96 96" aria-hidden="true">
+      <rect x="6" y="6" width="84" height="84" rx="22" fill="#e4640b" />
+      <rect x="24" y="20" width="48" height="56" rx="9" fill="#fff7ec" />
+      <line x1="33" y1="34" x2="63" y2="34" stroke="#e4640b" strokeWidth="6" strokeLinecap="round" />
+      <line x1="33" y1="46" x2="55" y2="46" stroke="#e9d9bd" strokeWidth="6" strokeLinecap="round" />
+      <path d="M33 60 l7 7 l14 -14" fill="none" stroke="#2e9e6b" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const STATUS_LABEL = {
+  'local only': 'local', syncing: 'syncing…', synced: 'synced',
+  offline: 'offline', 'sign in to sync': 'tap to sync', 'update-needed': 'update app',
+};
+
 export default function App() {
   const [clientId, setClientId] = useState(() => localStorage.getItem('ns_client_id') || DEFAULT_CLIENT_ID);
   const [signedIn, setSignedIn] = useState(false);
   const [status, setStatus] = useState('local only');
   const [items, setItems] = useState([]);
   const [tab, setTab] = useState('notes');
-  const [editing, setEditing] = useState(null); // item being edited in the note editor
+  const [editing, setEditing] = useState(null); // item open in the note editor
 
   const { auth, engine } = useMemo(() => {
     if (!clientId) return {};
@@ -76,17 +93,17 @@ export default function App() {
   if (!clientId) return <SetupScreen onSave={(id) => { localStorage.setItem('ns_client_id', id); setClientId(id); }} />;
 
   const notes = items.filter((i) => i.type === 'note').sort((a, b) => b.updated_at - a.updated_at);
-  const tasks = items.filter((i) => i.type === 'task')
-    .sort((a, b) => (a.done - b.done) || String(a.due || '~').localeCompare(String(b.due || '~')));
+  const tasks = items.filter((i) => i.type === 'task');
 
   return (
     <div className="shell">
       <header className="topbar">
+        <Logo />
         <h1>Nisaba</h1>
-        <span className={'status ' + status.split(' ')[0]}>{status}</span>
+        <span className={'pill ' + status.split(' ')[0]}>{STATUS_LABEL[status] || status}</span>
         {signedIn
-          ? <button className="ghost" onClick={() => { auth.signOut(); setSignedIn(false); setStatus('local only'); }}>Sign out</button>
-          : <button className="primary" onClick={signIn}>Connect Google Drive</button>}
+          ? <button className="ghost small" onClick={() => { auth.signOut(); setSignedIn(false); setStatus('local only'); }}>Sign out</button>
+          : <button className="ghost small" onClick={signIn}>Sign in</button>}
       </header>
 
       <nav className="tabs">
@@ -100,7 +117,6 @@ export default function App() {
       <main>
         {tab === 'notes' && (
           <>
-            <button className="primary wide" onClick={async () => setEditing(await saveItem({ type: 'note' }))}>+ New note</button>
             <ul className="items">
               {notes.map((n) => (
                 <li key={n.id} onClick={() => setEditing(n)}>
@@ -109,13 +125,15 @@ export default function App() {
                     <p>
                       {(n.attachments || []).length > 0 && <span className="tag">📎{n.attachments.length}</span>}
                       {n.tags.map((t) => <span key={t} className="tag">#{t}</span>)}
-                      {(n.body || '').slice(0, 120)}
+                      {(n.body || '').slice(0, 120) || <span className="faint">No text</span>}
                     </p>
                   </div>
+                  <span className="when">{relativeDay(n.updated_at)}</span>
                 </li>
               ))}
-              {notes.length === 0 && <p className="muted">No notes yet.</p>}
+              {notes.length === 0 && <EmptyState text="Capture your first note with the ＋ button." />}
             </ul>
+            <button className="fab" aria-label="New note" onClick={async () => setEditing(await saveItem({ type: 'note' }))}>＋</button>
           </>
         )}
 
@@ -134,11 +152,45 @@ export default function App() {
   );
 }
 
+function relativeDay(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const days = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) -
+    new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function dueLabel(due, today) {
+  if (!due) return null;
+  const diff = Math.round((new Date(due) - new Date(today)) / 86400000);
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  if (diff < 0) return `${-diff}d late`;
+  if (diff < 7) return new Date(due).toLocaleDateString(undefined, { weekday: 'short' });
+  return new Date(due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function EmptyState({ text }) {
+  return <p className="muted empty">{text}</p>;
+}
+
 function Tasks({ tasks, saveItem }) {
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
-  const [openId, setOpenId] = useState(null); // task whose subtask list is expanded
+  const [openId, setOpenId] = useState(null); // task with its detail panel expanded
   const today = new Date().toISOString().slice(0, 10);
+
+  const byDue = (a, b) => String(a.due || '~').localeCompare(String(b.due || '~')) || b.updated_at - a.updated_at;
+  const sections = [
+    { name: 'Overdue', list: tasks.filter((t) => !t.done && t.due && t.due < today).sort(byDue) },
+    { name: 'Today', list: tasks.filter((t) => !t.done && t.due === today).sort(byDue) },
+    { name: 'Upcoming', list: tasks.filter((t) => !t.done && (!t.due || t.due > today)).sort(byDue) },
+    { name: 'Done', list: tasks.filter((t) => t.done).sort((a, b) => b.updated_at - a.updated_at) },
+  ];
+
   return (
     <>
       <form className="task-form" onSubmit={async (e) => {
@@ -154,19 +206,26 @@ function Tasks({ tasks, saveItem }) {
         </label>
         <button className="primary" type="submit">Add</button>
       </form>
-      <ul className="items">
-        {tasks.map((t) => (
-          <TaskRow
-            key={t.id}
-            task={t}
-            today={today}
-            open={openId === t.id}
-            onToggleOpen={() => setOpenId(openId === t.id ? null : t.id)}
-            saveItem={saveItem}
-          />
-        ))}
-        {tasks.length === 0 && <p className="muted">No tasks yet.</p>}
-      </ul>
+
+      {tasks.length === 0 && <EmptyState text="Add a task above — give it a due date and subtasks." />}
+
+      {sections.map(({ name, list }) => list.length > 0 && (
+        <section key={name}>
+          <h2 className={'section-h' + (name === 'Overdue' ? ' alert' : '')}>{name}</h2>
+          <ul className="items">
+            {list.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                today={today}
+                open={openId === t.id}
+                onToggleOpen={() => setOpenId(openId === t.id ? null : t.id)}
+                saveItem={saveItem}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
     </>
   );
 }
@@ -192,12 +251,24 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
             </span>
           )}
         </div>
-        {t.due && <span className={'due' + (!t.done && t.due < today ? ' overdue' : '')}>{t.due}</span>}
-        <button className="chevron" aria-label="subtasks" onClick={onToggleOpen}>{open ? '▾' : '▸'}</button>
+        {t.due && <span className={'due' + (!t.done && t.due < today ? ' overdue' : '')}>{dueLabel(t.due, today)}</span>}
+        <button className="chevron" aria-label="details" onClick={onToggleOpen}>{open ? '▾' : '▸'}</button>
       </div>
 
       {open && (
         <div className="subtasks">
+          <div className="task-edit">
+            <input
+              defaultValue={t.title}
+              aria-label="task title"
+              onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) saveItem({ id: t.id, title: v }); }}
+            />
+            <label className="due-field">
+              <span>Due date</span>
+              <input type="date" defaultValue={t.due || ''} onChange={(e) => saveItem({ id: t.id, due: e.target.value || null })} />
+            </label>
+          </div>
+
           {subs.map((s) => (
             <label key={s.id} className={'subtask' + (s.done ? ' done' : '')}>
               <input
@@ -278,7 +349,7 @@ function NoteEditor({ item, engine, saveItem, onClose }) {
   return (
     <div className="overlay">
       <div className="panel">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" autoFocus />
+        <input className="editor-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" autoFocus />
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -319,7 +390,7 @@ function SetupScreen({ onSave }) {
   const [value, setValue] = useState('');
   return (
     <div className="shell setup">
-      <h1>Nisaba</h1>
+      <h1><Logo /> Nisaba</h1>
       <p>
         One-time setup: this app syncs through <strong>your own Google Drive</strong>, so it
         needs a Google OAuth Client ID you create for yourself. Follow{' '}

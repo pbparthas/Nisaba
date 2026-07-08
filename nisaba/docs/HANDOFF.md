@@ -119,6 +119,34 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
   how Enki communicates before designing anything. It consumes the phase-4
   REST/MCP surface.
 
+## UX status and direction (owner cares about this a lot)
+
+The owner disliked the first UI pass and asked for proper polish. A v2 pass
+shipped at the end of the prior session: inline SVG logo mark next to the
+wordmark, quiet status pill instead of a giant connect button, tasks grouped
+into Overdue / Today / Upcoming / Done with relative due labels ("tomorrow",
+"3d late"), tap-to-edit task title/due date in the expanded panel, floating
+＋ button for notes, last-edited stamps on note cards, friendlier empty
+states. Reference the owner named: **Golazo** (goal-tracking app by WowMakers;
+creamy background, white cards, playful) — its case-study page blocks fetching,
+so the theme was built from description. If the owner shares screenshots of
+UIs they like, match them. Likely next asks: better typography, subtle motion,
+a real agenda/home view (phase 3), dark-mode toggle. Always send a screenshot
+(Playwright, 420px viewport) with UI changes and expect iteration.
+
+## Auth behavior (understand before touching)
+
+Browser-only OAuth cannot mint refresh tokens; sessions ride on (a) a cached
+access token in localStorage (≤1h) and (b) GIS silent refresh via the Google
+session iframe. If both fail, the pill shows "tap to sync" and the Sign in
+button calls requestAccessToken with prompt '' — Google then shows only what
+it must. Do NOT switch the button back to prompt 'consent' (it forces the
+full consent screen every time — this was the owner's "asks me to sign in
+every time" complaint). If re-prompting is still reported: first verify the
+consent screen is In production (Testing revokes weekly), then consider the
+authorization-code flow — which needs a token-exchange backend and is a real
+scope change to discuss with the owner.
+
 ## Pitfalls learned the hard way (do not re-learn these)
 
 1. **Google consent screen in "Testing" kills refresh/silent tokens after 7

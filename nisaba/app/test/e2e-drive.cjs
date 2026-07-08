@@ -45,14 +45,14 @@ async function newDevice(browser, mock) {
 
   // Device A: create a note with an attachment
   const a = await newDevice(browser, mock);
-  await a.page.click('text=+ New note');
+  await a.page.click('.fab');
   await a.page.fill('input[placeholder="Title"]', 'Trip plan');
   await a.page.fill('textarea', 'Pack camera, book hotel');
   await a.page.setInputFiles('input[type=file]', { name: 'shot.png', mimeType: 'image/png', buffer: PNG });
   await a.page.waitForSelector('.thumbs img');
   console.log('A: attachment thumbnail rendered');
   await a.page.click('text=Done');
-  await a.page.waitForFunction(() => document.querySelector('.status')?.textContent === 'synced');
+  await a.page.waitForFunction(() => document.querySelector('.pill')?.textContent === 'synced');
   console.log('A: synced');
 
   const driveNames = [...mock._files.values()].map((f) => f.name);
@@ -69,7 +69,7 @@ async function newDevice(browser, mock) {
   // Device B edits; device A picks it up on its next 30s cycle (force via focus)
   await b.page.fill('input[placeholder="Title"]', 'Trip plan v2');
   await b.page.click('text=Done');
-  await b.page.waitForFunction(() => document.querySelector('.status')?.textContent === 'synced');
+  await b.page.waitForFunction(() => document.querySelector('.pill')?.textContent === 'synced');
   await a.page.dispatchEvent('body', 'focus');
   await a.page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await a.page.waitForFunction(() =>
