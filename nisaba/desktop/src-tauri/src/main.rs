@@ -119,25 +119,15 @@ fn main() {
         js_string(&token)
     );
 
-    // Load the deployed web app so UI updates arrive automatically with each
-    // web deploy — no rebuild needed for frontend changes. Dev builds load the
-    // local vite server so local changes hot-reload. Override with NISABA_APP_URL.
-    let app_url = std::env::var("NISABA_APP_URL").unwrap_or_else(|_| {
-        if cfg!(debug_assertions) {
-            "http://localhost:5173/".to_string()
-        } else {
-            "https://nisaba.orionforge.dev/".to_string()
-        }
-    });
-
+    // Load the bundled UI (tauri://localhost). We must NOT load the deployed
+    // https site: the Linux webview (WebKitGTK) blocks fetches from an https
+    // page to the http://localhost service as mixed content, which breaks auth.
+    // The bundled tauri:// origin can reach the local service. (UI updates
+    // therefore need a rebuild; the Tauri updater is the path to auto-updates.)
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(child)))
         .setup(move |app| {
-            WebviewWindowBuilder::new(
-                app,
-                "main",
-                WebviewUrl::External(app_url.parse().expect("valid NISABA_APP_URL")),
-            )
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Nisaba")
                 .inner_size(440.0, 860.0)
                 .min_inner_size(360.0, 640.0)
