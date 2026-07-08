@@ -19,6 +19,7 @@
 > - **Doc nits** — HANDOFF architecture block refreshed.
 >
 > The Worker change needs `npx wrangler deploy` (owner) to go live.
+> **Deployed by the owner 2026-07-08 — review closed, nothing outstanding.**
 
 ---
 
