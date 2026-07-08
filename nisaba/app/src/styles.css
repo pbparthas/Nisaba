@@ -43,24 +43,38 @@
 :root { --note-ink: var(--ink); }
 :root[data-note-ink="sepia"] { --note-ink: #6b5636; }
 :root[data-note-ink="forest"] { --note-ink: #2f6b43; }
+:root[data-note-ink="teal"] { --note-ink: #12736a; }
 :root[data-note-ink="wine"] { --note-ink: #8a3033; }
 :root[data-note-ink="navy"] { --note-ink: #2a3f6b; }
+:root[data-note-ink="indigo"] { --note-ink: #3a3a96; }
 :root[data-note-ink="plum"] { --note-ink: #5f3a63; }
+:root[data-note-ink="berry"] { --note-ink: #98276e; }
+:root[data-note-ink="rust"] { --note-ink: #b0562b; }
+:root[data-note-ink="olive"] { --note-ink: #5c6a1f; }
 :root[data-mode="dark"][data-note-ink="sepia"] { --note-ink: #d8b98a; }
 :root[data-mode="dark"][data-note-ink="forest"] { --note-ink: #6fc79b; }
+:root[data-mode="dark"][data-note-ink="teal"] { --note-ink: #5fcabf; }
 :root[data-mode="dark"][data-note-ink="wine"] { --note-ink: #e08a8c; }
 :root[data-mode="dark"][data-note-ink="navy"] { --note-ink: #8aa6e0; }
+:root[data-mode="dark"][data-note-ink="indigo"] { --note-ink: #9a9aec; }
 :root[data-mode="dark"][data-note-ink="plum"] { --note-ink: #c79bd0; }
+:root[data-mode="dark"][data-note-ink="berry"] { --note-ink: #e982c0; }
+:root[data-mode="dark"][data-note-ink="rust"] { --note-ink: #e69a6c; }
+:root[data-mode="dark"][data-note-ink="olive"] { --note-ink: #bfcb6b; }
 
 /* Per-note background palette (theme-aware); painted via .card[data-color]. */
 :root {
   --nc-default: var(--card);
-  --nc-rose: #f0d3cf; --nc-amber: #f0dcb0; --nc-sage: #d3e2c2; --nc-teal: #c3e0da;
-  --nc-sky: #cbdcea; --nc-lavender: #ded9ec; --nc-clay: #ecd3ba;
+  --nc-rose: #f0d3cf; --nc-coral: #f6cdba; --nc-amber: #f0dcb0; --nc-lime: #deeab4;
+  --nc-sage: #d3e2c2; --nc-mint: #c4ecd4; --nc-teal: #c3e0da; --nc-sky: #cbdcea;
+  --nc-ocean: #bcd6ef; --nc-lavender: #ded9ec; --nc-orchid: #e7c9ea; --nc-blush: #f2d0e0;
+  --nc-clay: #ecd3ba;
 }
 :root[data-mode="dark"] {
-  --nc-rose: #301d1f; --nc-amber: #2d2714; --nc-sage: #1d2a1c; --nc-teal: #14282a;
-  --nc-sky: #16222e; --nc-lavender: #211d2b; --nc-clay: #2a2016;
+  --nc-rose: #301d1f; --nc-coral: #301c13; --nc-amber: #2d2714; --nc-lime: #242c12;
+  --nc-sage: #1d2a1c; --nc-mint: #122a1e; --nc-teal: #14282a; --nc-sky: #16222e;
+  --nc-ocean: #122334; --nc-lavender: #211d2b; --nc-orchid: #251a28; --nc-blush: #2c1a24;
+  --nc-clay: #2a2016;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -191,11 +205,17 @@ input, textarea, button { font-family: inherit; }
 .btn.danger-fill { background: var(--overdue); color: #fff; border-color: transparent; }
 /* per-note background colour */
 .card[data-color="rose"], .panel[data-color="rose"] { background: var(--nc-rose); }
+.card[data-color="coral"], .panel[data-color="coral"] { background: var(--nc-coral); }
 .card[data-color="amber"], .panel[data-color="amber"] { background: var(--nc-amber); }
+.card[data-color="lime"], .panel[data-color="lime"] { background: var(--nc-lime); }
 .card[data-color="sage"], .panel[data-color="sage"] { background: var(--nc-sage); }
+.card[data-color="mint"], .panel[data-color="mint"] { background: var(--nc-mint); }
 .card[data-color="teal"], .panel[data-color="teal"] { background: var(--nc-teal); }
 .card[data-color="sky"], .panel[data-color="sky"] { background: var(--nc-sky); }
+.card[data-color="ocean"], .panel[data-color="ocean"] { background: var(--nc-ocean); }
 .card[data-color="lavender"], .panel[data-color="lavender"] { background: var(--nc-lavender); }
+.card[data-color="orchid"], .panel[data-color="orchid"] { background: var(--nc-orchid); }
+.card[data-color="blush"], .panel[data-color="blush"] { background: var(--nc-blush); }
 .card[data-color="clay"], .panel[data-color="clay"] { background: var(--nc-clay); }
 
 /* ---------- notes ---------- */
@@ -359,9 +379,27 @@ input, textarea, button { font-family: inherit; }
 .ink-dot[data-ink="default"] { background: var(--ink); }
 .ink-dot[data-ink="sepia"] { background: #6b5636; }
 .ink-dot[data-ink="forest"] { background: #2f6b43; }
+.ink-dot[data-ink="teal"] { background: #12736a; }
 .ink-dot[data-ink="wine"] { background: #8a3033; }
 .ink-dot[data-ink="navy"] { background: #2a3f6b; }
+.ink-dot[data-ink="indigo"] { background: #3a3a96; }
 .ink-dot[data-ink="plum"] { background: #5f3a63; }
+.ink-dot[data-ink="berry"] { background: #98276e; }
+.ink-dot[data-ink="rust"] { background: #b0562b; }
+.ink-dot[data-ink="olive"] { background: #5c6a1f; }
+
+/* Font picker — a vertical list, each row rendered in its own face. */
+.font-list { display: flex; flex-direction: column; gap: 6px; }
+.font-list button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; cursor: pointer;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
+  font-size: 18px; line-height: 1.1;
+}
+.font-list button .fname { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-family: "Inter", sans-serif; }
+.font-list button.on { border-color: var(--accent); background: var(--accent-wash); }
+.font-list button.on .fname { color: var(--accent); }
 
 .toggle { display: flex; gap: 8px; }
 .toggle button {

@@ -5,6 +5,8 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
+import '@fontsource/saira-condensed/400.css';
+import '@fontsource/saira-condensed/500.css';
 import '@fontsource/saira-condensed/600.css';
 import '@fontsource/saira-condensed/800.css';
 import '@fontsource/great-vibes/400.css';
@@ -15,6 +17,19 @@ import '@fontsource/lora/500.css';
 import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/500.css';
 import '@fontsource/nunito/600.css';
+// Note-body typeface options (Settings → Note text → Font)
+import '@fontsource/work-sans/400.css';
+import '@fontsource/work-sans/500.css';
+import '@fontsource/work-sans/600.css';
+import '@fontsource/eb-garamond/400.css';
+import '@fontsource/eb-garamond/500.css';
+import '@fontsource/dancing-script/400.css';
+import '@fontsource/dancing-script/500.css';
+import '@fontsource/dancing-script/600.css';
+import '@fontsource/dancing-script/700.css';
+import '@fontsource/sacramento/400.css';
+import '@fontsource/pacifico/400.css';
+import '@fontsource/parisienne/400.css';
 
 import { registerSW } from 'virtual:pwa-register';
 

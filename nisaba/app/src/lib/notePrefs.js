@@ -6,33 +6,49 @@ const KEYS = { font: 'ns:noteFont', size: 'ns:noteSize', weight: 'ns:noteWeight'
 
 export const NOTE_FONTS = {
   sans: '"Inter", system-ui, -apple-system, sans-serif',
+  display: '"Work Sans", "Inter", system-ui, sans-serif', // Aptos-adjacent (Aptos itself is proprietary)
   serif: '"Spectral", Georgia, "Times New Roman", serif',
   book: '"Lora", Georgia, serif',
+  garamond: '"EB Garamond", "Spectral", Georgia, serif',
   rounded: '"Nunito", "Segoe UI", system-ui, sans-serif',
+  condensed: '"Saira Condensed", "Inter", system-ui, sans-serif',
   mono: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+  script: '"Great Vibes", "Segoe Script", cursive',
+  cursive: '"Dancing Script", "Segoe Script", cursive',
+  casual: '"Sacramento", "Segoe Script", cursive',
+  brush: '"Pacifico", "Segoe Script", cursive',
+  elegant: '"Parisienne", "Segoe Script", cursive',
 };
+// Rendered as a vertical list in Settings (each row shown in its own face), so
+// the decorative faces below are legible before you pick them.
 export const NOTE_FONT_OPTIONS = [
-  ['sans', 'Sans'], ['serif', 'Serif'], ['book', 'Book'], ['rounded', 'Rounded'], ['mono', 'Mono'],
+  ['sans', 'Sans'], ['display', 'Display'], ['serif', 'Serif'], ['book', 'Book'],
+  ['garamond', 'Garamond'], ['rounded', 'Rounded'], ['condensed', 'Condensed'], ['mono', 'Mono'],
+  ['script', 'Calligraphy'], ['cursive', 'Cursive'], ['casual', 'Casual'],
+  ['brush', 'Brush'], ['elegant', 'Elegant'],
 ];
 export const NOTE_SIZE_OPTIONS = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
 const SIZE_PX = { s: '15px', m: '16.5px', l: '18.5px' };
-export const NOTE_WEIGHT_OPTIONS = [['regular', 'Regular'], ['medium', 'Medium'], ['semibold', 'Semibold']];
-const WEIGHT_N = { regular: '400', medium: '500', semibold: '600' };
+export const NOTE_WEIGHT_OPTIONS = [['regular', 'Regular'], ['medium', 'Medium'], ['semibold', 'Semibold'], ['bold', 'Bold']];
+const WEIGHT_N = { regular: '400', medium: '500', semibold: '600', bold: '700' };
 export const NOTE_STYLE_OPTIONS = [['normal', 'Normal'], ['italic', 'Italic']];
 
 // Ink resolves through CSS ([data-note-ink]) so each has a legible paper + dark
 // value; only the key is stored. Distinct hues (Slate dropped — it read the
 // same as the near-black Default).
 export const NOTE_INK_OPTIONS = [
-  ['default', 'Ink'], ['sepia', 'Sepia'], ['forest', 'Forest'],
-  ['wine', 'Wine'], ['navy', 'Navy'], ['plum', 'Plum'],
+  ['default', 'Ink'], ['sepia', 'Sepia'], ['forest', 'Forest'], ['teal', 'Teal'],
+  ['navy', 'Navy'], ['indigo', 'Indigo'], ['plum', 'Plum'], ['berry', 'Berry'],
+  ['wine', 'Wine'], ['rust', 'Rust'], ['olive', 'Olive'],
 ];
 
 // Per-note background palette — clearer, distinct hues (values in CSS,
 // theme-aware). Preview colour is the paper tone.
 export const NOTE_COLORS = [
-  ['default', '#efe7d2'], ['rose', '#f0d3cf'], ['amber', '#f0dcb0'], ['sage', '#d3e2c2'],
-  ['teal', '#c3e0da'], ['sky', '#cbdcea'], ['lavender', '#ded9ec'], ['clay', '#ecd3ba'],
+  ['default', '#efe7d2'], ['rose', '#f0d3cf'], ['coral', '#f6cdba'], ['amber', '#f0dcb0'],
+  ['lime', '#deeab4'], ['sage', '#d3e2c2'], ['mint', '#c4ecd4'], ['teal', '#c3e0da'],
+  ['sky', '#cbdcea'], ['ocean', '#bcd6ef'], ['lavender', '#ded9ec'], ['orchid', '#e7c9ea'],
+  ['blush', '#f2d0e0'], ['clay', '#ecd3ba'],
 ];
 
 const get = (k, d) => { try { return localStorage.getItem(KEYS[k]) || d; } catch { return d; } };

@@ -597,7 +597,14 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
         <span className="eyebrow">Note text</span>
         <div className="pref">
           <label>Font</label>
-          {seg('font', NOTE_FONT_OPTIONS, (k, l) => <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>)}
+          <div className="font-list">
+            {NOTE_FONT_OPTIONS.map(([k, l]) => (
+              <button key={k} className={prefs.font === k ? 'on' : ''} onClick={() => updatePref('font', k)}>
+                <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>
+                <span className="fname">{l}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="pref">
           <label>Size</label>
