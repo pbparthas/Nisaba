@@ -539,11 +539,24 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
     </div>
   );
 
+  const [storage, setStorage] = useState(null); // { persisted, usedMB }
+
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstall(e); };
     window.addEventListener('beforeinstallprompt', onPrompt);
+    (async () => {
+      try {
+        const persisted = navigator.storage?.persisted ? await navigator.storage.persisted() : null;
+        const est = navigator.storage?.estimate ? await navigator.storage.estimate() : null;
+        setStorage({ persisted, usedMB: est?.usage ? (est.usage / 1048576).toFixed(1) : null });
+      } catch { /* unsupported */ }
+    })();
     return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
+
+  async function keepData() {
+    try { const ok = await navigator.storage.persist(); setStorage((s) => ({ ...s, persisted: ok })); } catch { /* blocked */ }
+  }
 
   return (
     <main className="screen">
@@ -609,12 +622,25 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
       </div>
 
       <div className="card set-card">
-        <span className="eyebrow">App</span>
-        <div className="btn-row" style={{ marginTop: 0 }}>
-          {install
-            ? <button className="btn accent" onClick={async () => { install.prompt(); await install.userChoice; setInstall(null); }}>📲 Install app</button>
-            : <span className="lead">Add to your home screen from the browser menu to install.</span>}
+        <span className="eyebrow">App &amp; storage</span>
+        <div className="set-row">
+          <span>On this device</span>
+          <span className="val">{itemCount} item{itemCount === 1 ? '' : 's'}{storage?.usedMB ? ` · ${storage.usedMB} MB` : ''}</span>
         </div>
+        <div className="set-row">
+          <span>Offline copy</span>
+          <span className={'status-pill' + (storage?.persisted ? '' : ' off')} style={{ marginLeft: 'auto' }}>
+            {storage?.persisted ? 'kept' : storage?.persisted === false ? 'best-effort' : '—'}
+          </span>
+        </div>
+        <div className="btn-row">
+          {install && <button className="btn accent" onClick={async () => { install.prompt(); await install.userChoice; setInstall(null); }}>📲 Install app</button>}
+          {storage?.persisted === false && <button className="btn" onClick={keepData}>Keep data on device</button>}
+        </div>
+        <p className="lead" style={{ marginTop: 12 }}>
+          Works offline once installed. {install ? '' : 'Add to your home screen from the browser menu to install. '}
+          Your notes stay on this device and in your Drive.
+        </p>
       </div>
 
       <div className="card set-card" style={{ color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
