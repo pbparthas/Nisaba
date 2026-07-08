@@ -57,7 +57,13 @@ export function createWorkerAuth({ workerUrl, clientId, redirectUri, sessionFile
       const m = c.match(/(?:^|;\s*)ns_session=([^;]+)/);
       if (m) { cookie = m[1]; await saveSession(); }
     }
-    if (!res.ok) { const e = new Error(`worker ${path} ${res.status}`); e.code = res.status; throw e; }
+    if (!res.ok) {
+      let detail = '';
+      try { detail = await res.text(); } catch { /* ignore */ }
+      const e = new Error(`worker ${path} ${res.status}${detail ? ' — ' + detail : ''}`);
+      e.code = res.status;
+      throw e;
+    }
     return res.json();
   }
 
