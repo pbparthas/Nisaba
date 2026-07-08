@@ -6,6 +6,10 @@ import { createSyncEngine } from './lib/sync.js';
 import { newItem } from './lib/merge.js';
 import { getMode, applyMode } from './lib/theme.js';
 import { blocksToText } from './lib/notebody.js';
+import {
+  getNoteFont, getNoteInk, setNoteFont, setNoteInk,
+  NOTE_FONT_OPTIONS, NOTE_INK_OPTIONS,
+} from './lib/notePrefs.js';
 
 const store = createIdbStore();
 
@@ -152,7 +156,7 @@ export default function App() {
           <span className="eyebrow">Notes{notes.length ? ' · ' + notes.length : ''}</span>
           <ul className="list" style={{ listStyle: 'none' }}>
             {notes.map((n) => (
-              <li key={n.id} className="card note" onClick={() => setEditing(n)}>
+              <li key={n.id} className="card note" data-color={n.color || undefined} onClick={() => setEditing(n)}>
                 <h3>{n.title || <em>Untitled</em>}</h3>
                 <p className="snip">{blocksToText(n.body).slice(0, 140) || <span className="faint">No text yet</span>}</p>
                 <div className="meta">
@@ -388,6 +392,8 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
 
 function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
   const [install, setInstall] = useState(null); // captured beforeinstallprompt event
+  const [noteFont, setNoteFontState] = useState(getNoteFont);
+  const [noteInk, setNoteInkState] = useState(getNoteInk);
 
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstall(e); };
@@ -408,6 +414,28 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
           ))}
         </div>
         <p className="lead" style={{ marginTop: 10 }}>Same warm design either way — paper for daylight, lights out for late nights.</p>
+      </div>
+
+      <div className="card set-card">
+        <span className="eyebrow">Note text</span>
+        <div className="toggle">
+          {NOTE_FONT_OPTIONS.map(([k, label]) => (
+            <button
+              key={k}
+              className={noteFont === k ? 'on' : ''}
+              style={{ fontFamily: k === 'serif' ? '"Spectral", serif' : k === 'mono' ? 'ui-monospace, monospace' : 'inherit' }}
+              onClick={() => { setNoteFont(k); setNoteFontState(k); }}
+            >{label}</button>
+          ))}
+        </div>
+        <div className="ink-row">
+          {NOTE_INK_OPTIONS.map(([k, label]) => (
+            <button key={k} className={'ink-chip' + (noteInk === k ? ' on' : '')} onClick={() => { setNoteInk(k); setNoteInkState(k); }}>
+              <span className="ink-dot" data-ink={k} />{label}
+            </button>
+          ))}
+        </div>
+        <p className="lead" style={{ marginTop: 10 }}>Font &amp; colour for note text. Each note's background colour is set inside the note.</p>
       </div>
 
       <div className="card set-card">

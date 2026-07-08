@@ -38,6 +38,27 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 26px -14px rgba(0, 0, 0, 0.7);
 }
 
+/* Note text ink (user choice, theme-aware). Only the key is stored; the value
+   resolves here so every option stays legible on paper and in dark. */
+:root { --note-ink: var(--ink); }
+:root[data-note-ink="sepia"] { --note-ink: #5b4a2f; }
+:root[data-note-ink="forest"] { --note-ink: #2f5d3a; }
+:root[data-note-ink="slate"] { --note-ink: #384252; }
+:root[data-mode="dark"][data-note-ink="sepia"] { --note-ink: #dcc7a0; }
+:root[data-mode="dark"][data-note-ink="forest"] { --note-ink: #7fc79b; }
+:root[data-mode="dark"][data-note-ink="slate"] { --note-ink: #aab6c6; }
+
+/* Per-note background palette (theme-aware); painted via .card[data-color]. */
+:root {
+  --nc-default: var(--card);
+  --nc-sage: #e3ead9; --nc-sky: #dbe5ec; --nc-sand: #efe1c9;
+  --nc-blush: #f0e1dd; --nc-stone: #e7e1d4;
+}
+:root[data-mode="dark"] {
+  --nc-sage: #1b241c; --nc-sky: #171f27; --nc-sand: #241e16;
+  --nc-blush: #261c1b; --nc-stone: #221f18;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -124,6 +145,12 @@ input, textarea, button { font-family: inherit; }
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 15px;
 }
+/* per-note background colour */
+.card[data-color="sage"], .panel[data-color="sage"] { background: var(--nc-sage); }
+.card[data-color="sky"], .panel[data-color="sky"] { background: var(--nc-sky); }
+.card[data-color="sand"], .panel[data-color="sand"] { background: var(--nc-sand); }
+.card[data-color="blush"], .panel[data-color="blush"] { background: var(--nc-blush); }
+.card[data-color="stone"], .panel[data-color="stone"] { background: var(--nc-stone); }
 
 /* ---------- notes ---------- */
 .note { cursor: pointer; }
@@ -262,6 +289,19 @@ input, textarea, button { font-family: inherit; }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 14px; }
 .set-row + .set-row { border-top: 1px solid var(--line); }
 .set-row .val { margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; }
+.ink-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.ink-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink);
+  background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px 7px 9px;
+}
+.ink-chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+.ink-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.ink-dot[data-ink="default"] { background: var(--ink); }
+.ink-dot[data-ink="sepia"] { background: #5b4a2f; }
+.ink-dot[data-ink="forest"] { background: #2f5d3a; }
+.ink-dot[data-ink="slate"] { background: #384252; }
+
 .toggle { display: flex; gap: 8px; }
 .toggle button {
   flex: 1; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -331,15 +371,26 @@ input, textarea, button { font-family: inherit; }
   min-height: 38dvh; font-size: 15px; line-height: 1.55; padding: 0;
 }
 .panel textarea:focus { outline: none; }
-/* BlockNote editor — blend it into the paper/dark sheet. */
+/* BlockNote editor — blend it into the paper/dark sheet, honouring the user's
+   chosen note font + ink. */
 .bn-wrap { min-height: 40dvh; }
 .bn-wrap .bn-container {
   --bn-colors-editor-background: transparent;
-  --bn-colors-editor-text: var(--ink);
-  --bn-font-family: "Inter", system-ui, sans-serif;
+  --bn-colors-editor-text: var(--note-ink, var(--ink));
+  --bn-font-family: var(--note-font, "Inter", system-ui, sans-serif);
   background: transparent;
 }
 .bn-wrap .bn-editor { padding-inline: 0; }
+/* keep the slash / suggestion menu compact so it fits above the keyboard */
+.bn-suggestion-menu, [class*="bn-suggestion"] { max-height: 44dvh; overflow-y: auto; }
+
+/* per-note colour swatch picker (in the editor) */
+.swatches { display: flex; gap: 10px; align-items: center; padding: 4px 0; }
+.swatch {
+  width: 26px; height: 26px; border-radius: 50%; cursor: pointer; flex: none;
+  border: 1.5px solid var(--line); padding: 0;
+}
+.swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash); }
 .tag-input {
   border: none; background: none; color: var(--muted); font-size: 13px;
   border-top: 1px solid var(--line); padding: 10px 0 0;
