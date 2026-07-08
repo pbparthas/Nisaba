@@ -4,6 +4,7 @@ import { createAuth } from './lib/auth.js';
 import { createDriveClient } from './lib/drive.js';
 import { createSyncEngine } from './lib/sync.js';
 import { newItem } from './lib/merge.js';
+import { getMode, applyMode } from './lib/theme.js';
 
 const store = createIdbStore();
 
@@ -13,17 +14,30 @@ const store = createIdbStore();
 // stores the override in localStorage.
 const DEFAULT_CLIENT_ID = '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
 
-function Logo() {
+/* Nisaba mark — a clay tablet with two ruled lines, a cuneiform wedge and a
+   reed stylus. Theme-aware: the tablet frame + ruling take the current ink
+   colour, the wedge + stylus take the accent, so it prints correctly on paper,
+   in lights-out, and as the app icon. (Named for the Sumerian goddess of
+   writing; the tablet + reed + wedge are her instruments.) */
+function Logo({ size = 26 }) {
   return (
-    <svg className="logo" viewBox="0 0 96 96" aria-hidden="true">
-      <rect x="6" y="6" width="84" height="84" rx="22" fill="#e4640b" />
-      <rect x="24" y="20" width="48" height="56" rx="9" fill="#fff7ec" />
-      <line x1="33" y1="34" x2="63" y2="34" stroke="#e4640b" strokeWidth="6" strokeLinecap="round" />
-      <line x1="33" y1="46" x2="55" y2="46" stroke="#e9d9bd" strokeWidth="6" strokeLinecap="round" />
-      <path d="M33 60 l7 7 l14 -14" fill="none" stroke="#2e9e6b" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className="logo" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="12" y="6" width="40" height="52" rx="10" fill="none" stroke="currentColor" strokeWidth="4" />
+      <line x1="20" y1="19" x2="44" y2="19" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" opacity="0.5" />
+      <line x1="20" y1="27" x2="38" y2="27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" opacity="0.5" />
+      <path d="M20 39 h13 l-6.5 8 Z" fill="var(--accent)" />
+      <path d="M36 39 h9 l-4.5 6 Z" fill="var(--accent)" opacity="0.7" />
+      <path d="M43 31 L27 51" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" />
     </svg>
   );
 }
+
+const CalIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+    <path d="M3.5 9.5h17M8 3v4M16 3v4" strokeLinecap="round" />
+  </svg>
+);
 
 const STATUS_LABEL = {
   'local only': 'local', syncing: 'syncing…', synced: 'synced',
@@ -35,8 +49,9 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [status, setStatus] = useState('local only');
   const [items, setItems] = useState([]);
-  const [tab, setTab] = useState('notes');
-  const [editing, setEditing] = useState(null); // item open in the note editor
+  const [tab, setTab] = useState('notes'); // 'notes' | 'tasks' | 'settings'
+  const [editing, setEditing] = useState(null);
+  const [mode, setMode] = useState(getMode);
 
   const { auth, engine } = useMemo(() => {
     if (!clientId) return {};
@@ -48,7 +63,6 @@ export default function App() {
       onStatus: (s) => {
         if (s === 'auth-needed') { setSignedIn(false); setStatus('sign in to sync'); return; }
         setStatus(s);
-        // A successful sync proves we hold a valid Google session — reflect it.
         if (s === 'synced') { setSignedIn(true); refresh(); }
       },
     });
@@ -71,6 +85,8 @@ export default function App() {
     return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
   }, [auth, engine]);
 
+  function setAppMode(m) { applyMode(m); setMode(m); }
+
   async function saveItem(partial) {
     const existing = partial.id ? await store.getItem(partial.id) : null;
     const item = { ...(existing || newItem({})), ...partial, updated_at: Date.now(), dirty: 1 };
@@ -90,55 +106,85 @@ export default function App() {
     }
   }
 
+  function signOut() {
+    auth.signOut();
+    setSignedIn(false);
+    setStatus('local only');
+  }
+
   if (!clientId) return <SetupScreen onSave={(id) => { localStorage.setItem('ns_client_id', id); setClientId(id); }} />;
 
   const notes = items.filter((i) => i.type === 'note').sort((a, b) => b.updated_at - a.updated_at);
   const tasks = items.filter((i) => i.type === 'task');
+  const statusKey = status.split(' ')[0];
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <Logo />
-        <h1>Nisaba</h1>
-        <span className={'pill ' + status.split(' ')[0]}>{STATUS_LABEL[status] || status}</span>
-        {signedIn
-          ? <button className="ghost small" onClick={() => { auth.signOut(); setSignedIn(false); setStatus('local only'); }}>Sign out</button>
-          : <button className="ghost small" onClick={signIn}>Sign in</button>}
+      <header className="hdr">
+        <div className="hdr-inner">
+          <a className="brand" href="#" onClick={(e) => { e.preventDefault(); setTab('notes'); }}>
+            <Logo size={26} />
+            <span className="word">NISA<b>BA</b></span>
+          </a>
+          <span className="spacer" />
+          <span className={'status ' + statusKey}>{STATUS_LABEL[status] || status}</span>
+          <button
+            className={'gear' + (tab === 'settings' ? ' active' : '')}
+            aria-label="Settings"
+            onClick={() => setTab('settings')}
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <circle cx="12" cy="12" r="3.2" />
+              <path d="M12 2.5v2.5M12 19v2.5M4.2 6.5l1.8 1.8M18 15.7l1.8 1.8M2.5 12H5M19 12h2.5M4.2 17.5l1.8-1.8M18 8.3l1.8-1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </header>
 
-      <nav className="tabs">
-        {['notes', 'tasks'].map((t) => (
-          <button key={t} className={'tab' + (tab === t ? ' active' : '')} onClick={() => setTab(t)}>
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </nav>
-
-      <main>
-        {tab === 'notes' && (
-          <>
-            <ul className="items">
-              {notes.map((n) => (
-                <li key={n.id} onClick={() => setEditing(n)}>
-                  <div className="body">
-                    <h3>{n.title || <em>Untitled</em>}</h3>
-                    <p>
-                      {(n.attachments || []).length > 0 && <span className="tag">📎{n.attachments.length}</span>}
-                      {n.tags.map((t) => <span key={t} className="tag">#{t}</span>)}
-                      {(n.body || '').slice(0, 120) || <span className="faint">No text</span>}
-                    </p>
-                  </div>
+      {tab === 'notes' && (
+        <main className="screen">
+          <span className="eyebrow">Notes{notes.length ? ' · ' + notes.length : ''}</span>
+          <ul className="list" style={{ listStyle: 'none' }}>
+            {notes.map((n) => (
+              <li key={n.id} className="card note" onClick={() => setEditing(n)}>
+                <h3>{n.title || <em>Untitled</em>}</h3>
+                <p className="snip">{(n.body || '').slice(0, 140) || <span className="faint">No text yet</span>}</p>
+                <div className="meta">
+                  {(n.attachments || []).length > 0 && <span className="chip">📎 {n.attachments.length}</span>}
+                  {n.tags.map((t) => <span key={t} className="chip grain">#{t}</span>)}
                   <span className="when">{relativeDay(n.updated_at)}</span>
-                </li>
-              ))}
-              {notes.length === 0 && <EmptyState text="Capture your first note with the ＋ button." />}
-            </ul>
-            <button className="fab" aria-label="New note" onClick={async () => setEditing(await saveItem({ type: 'note' }))}>＋</button>
-          </>
-        )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {notes.length === 0 && <p className="empty">Capture your first note with the ＋ button.</p>}
+          <button className="fab" aria-label="New note" onClick={async () => setEditing(await saveItem({ type: 'note' }))}>＋</button>
+        </main>
+      )}
 
-        {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} />}
-      </main>
+      {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} />}
+
+      {tab === 'settings' && (
+        <Settings
+          mode={mode} setAppMode={setAppMode}
+          signedIn={signedIn} status={status} statusKey={statusKey}
+          onSignIn={signIn} onSignOut={signOut}
+          itemCount={items.length}
+        />
+      )}
+
+      <nav className="tabs" aria-label="Sections">
+        <div className="tabs-inner">
+          <button className={'tab' + (tab === 'notes' ? ' on' : '')} onClick={() => setTab('notes')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v5h5M8.5 13h7M8.5 16.5h5" strokeLinecap="round" /></svg>
+            NOTES
+          </button>
+          <button className={'tab' + (tab === 'tasks' ? ' on' : '')} onClick={() => setTab('tasks')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6.5l2 2 3.5-4M4 17.5l2 2 3.5-4" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 6.5h7M13 17.5h7" strokeLinecap="round" /></svg>
+            TASKS
+          </button>
+        </div>
+      </nav>
 
       {editing && (
         <NoteEditor
@@ -173,46 +219,51 @@ function dueLabel(due, today) {
   return new Date(due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-function EmptyState({ text }) {
-  return <p className="muted empty">{text}</p>;
-}
-
 function Tasks({ tasks, saveItem }) {
+  const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
-  const [due, setDue] = useState('');
-  const [openId, setOpenId] = useState(null); // task with its detail panel expanded
+  const [openId, setOpenId] = useState(null);
   const today = new Date().toISOString().slice(0, 10);
 
   const byDue = (a, b) => String(a.due || '~').localeCompare(String(b.due || '~')) || b.updated_at - a.updated_at;
   const sections = [
-    { name: 'Overdue', list: tasks.filter((t) => !t.done && t.due && t.due < today).sort(byDue) },
+    { name: 'Overdue', alert: true, list: tasks.filter((t) => !t.done && t.due && t.due < today).sort(byDue) },
     { name: 'Today', list: tasks.filter((t) => !t.done && t.due === today).sort(byDue) },
     { name: 'Upcoming', list: tasks.filter((t) => !t.done && (!t.due || t.due > today)).sort(byDue) },
     { name: 'Done', list: tasks.filter((t) => t.done).sort((a, b) => b.updated_at - a.updated_at) },
   ];
 
+  async function add() {
+    if (!title.trim()) { setAdding(false); return; }
+    await saveItem({ ...newItem({ type: 'task' }), title: title.trim(), due: null });
+    setTitle(''); // stay open for rapid entry
+  }
+
   return (
-    <>
-      <form className="task-form" onSubmit={async (e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        await saveItem({ ...newItem({ type: 'task' }), title: title.trim(), due: due || null });
-        setTitle(''); setDue('');
-      }}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" />
-        <label className="due-field">
-          <span>Due date</span>
-          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-        </label>
-        <button className="primary" type="submit">Add</button>
-      </form>
+    <main className="screen">
+      {adding ? (
+        <div className="add-composer">
+          <span className="dot" />
+          <input
+            autoFocus value={title}
+            placeholder="New task…"
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') { setTitle(''); setAdding(false); } }}
+            onBlur={() => { if (!title.trim()) setAdding(false); }}
+          />
+        </div>
+      ) : (
+        <button className="add-task" onClick={() => setAdding(true)}>
+          <span className="plus">＋</span> Add task
+        </button>
+      )}
 
-      {tasks.length === 0 && <EmptyState text="Add a task above — give it a due date and subtasks." />}
+      {tasks.length === 0 && !adding && <p className="empty">Add a task, then open it to set a due date and subtasks.</p>}
 
-      {sections.map(({ name, list }) => list.length > 0 && (
-        <section key={name}>
-          <h2 className={'section-h' + (name === 'Overdue' ? ' alert' : '')}>{name}</h2>
-          <ul className="items">
+      {sections.map(({ name, alert, list }) => list.length > 0 && (
+        <section key={name} className="section">
+          <span className={'eyebrow' + (alert ? ' alert' : '')}>{name}</span>
+          <ul className="list" style={{ listStyle: 'none' }}>
             {list.map((t) => (
               <TaskRow
                 key={t.id}
@@ -226,81 +277,161 @@ function Tasks({ tasks, saveItem }) {
           </ul>
         </section>
       ))}
-    </>
+    </main>
   );
 }
 
 function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
   const [newSub, setNewSub] = useState('');
+  const [menu, setMenu] = useState(false);
   const subs = t.subtasks || [];
   const doneCount = subs.filter((s) => s.done).length;
+  const late = !t.done && t.due && t.due < today;
 
-  async function setSubtasks(subtasks) {
-    await saveItem({ id: t.id, subtasks });
-  }
+  async function setSubtasks(subtasks) { await saveItem({ id: t.id, subtasks }); }
 
   return (
-    <li className={'task' + (t.done ? ' done' : '') + (open ? ' open' : '')}>
+    <li className={'card task' + (t.done ? ' done' : '') + (open ? ' open' : '')}>
       <div className="task-row">
-        <input type="checkbox" checked={!!t.done} onChange={(e) => saveItem({ id: t.id, done: e.target.checked })} />
-        <div className="body" onClick={onToggleOpen}>
-          <h3>{t.title}</h3>
-          {subs.length > 0 && (
-            <span className={'subcount' + (doneCount === subs.length ? ' all-done' : '')}>
-              {doneCount}/{subs.length}
-            </span>
-          )}
-        </div>
-        {t.due && <span className={'due' + (!t.done && t.due < today ? ' overdue' : '')}>{dueLabel(t.due, today)}</span>}
-        <button className="chevron" aria-label="details" onClick={onToggleOpen}>{open ? '▾' : '▸'}</button>
+        <button
+          className={'tick' + (t.done ? ' done' : '')}
+          aria-label={t.done ? 'Mark not done' : 'Mark done'}
+          onClick={() => saveItem({ id: t.id, done: !t.done })}
+        >{t.done ? '✓' : ''}</button>
+        {/* One title only: a heading that becomes an inline editable field when
+            the card is open — never a second copy of the title in a box. */}
+        {open ? (
+          <input
+            className="edit-title"
+            defaultValue={t.title}
+            aria-label="Task title"
+            placeholder="Task title"
+            onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) saveItem({ id: t.id, title: v }); }}
+          />
+        ) : (
+          <div className="task-main" onClick={onToggleOpen}>
+            <div className="task-title">{t.title || 'Untitled task'}</div>
+            {(t.due || subs.length > 0) && (
+              <div className="task-sub">
+                {t.due && (
+                  <span className={'due-chip' + (late ? ' late' : ' set')}>
+                    <CalIcon />{dueLabel(t.due, today)}
+                  </span>
+                )}
+                {subs.length > 0 && (
+                  <span className={'count' + (doneCount === subs.length ? ' all' : '')}>{doneCount}/{subs.length}</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        <span className="chev" onClick={onToggleOpen}>›</span>
       </div>
 
       {open && (
-        <div className="subtasks">
-          <div className="task-edit">
-            <input
-              defaultValue={t.title}
-              aria-label="task title"
-              onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) saveItem({ id: t.id, title: v }); }}
-            />
-            <label className="due-field">
-              <span>Due date</span>
-              <input type="date" defaultValue={t.due || ''} onChange={(e) => saveItem({ id: t.id, due: e.target.value || null })} />
+        <div className="task-detail">
+          <div className="detail-meta">
+            <label className={'due-chip big' + (t.due ? ' set' : '')}>
+              <CalIcon />{t.due ? dueLabel(t.due, today) : 'Add date'}
+              <input type="date" value={t.due || ''} onChange={(e) => saveItem({ id: t.id, due: e.target.value || null })} />
             </label>
           </div>
 
           {subs.map((s) => (
-            <label key={s.id} className={'subtask' + (s.done ? ' done' : '')}>
-              <input
-                type="checkbox"
-                checked={!!s.done}
-                onChange={(e) => setSubtasks(subs.map((x) => (x.id === s.id ? { ...x, done: e.target.checked } : x)))}
-              />
-              <span>{s.title}</span>
+            <div key={s.id} className={'sub' + (s.done ? ' done' : '')}>
               <button
-                className="chevron"
-                aria-label="remove subtask"
-                onClick={(e) => { e.preventDefault(); setSubtasks(subs.filter((x) => x.id !== s.id)); }}
-              >✕</button>
-            </label>
+                className={'tick' + (s.done ? ' done' : '')}
+                aria-label={s.done ? 'Undo subtask' : 'Complete subtask'}
+                onClick={() => setSubtasks(subs.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)))}
+              >{s.done ? '✓' : ''}</button>
+              <span>{s.title}</span>
+              <button className="x" aria-label="Remove subtask" onClick={() => setSubtasks(subs.filter((x) => x.id !== s.id))}>✕</button>
+            </div>
           ))}
-          <form className="subtask-form" onSubmit={(e) => {
+
+          <form className="add-item" onSubmit={(e) => {
             e.preventDefault();
             if (!newSub.trim()) return;
             setSubtasks([...subs, { id: crypto.randomUUID(), title: newSub.trim(), done: false }]);
             setNewSub('');
           }}>
-            <input value={newSub} onChange={(e) => setNewSub(e.target.value)} placeholder="Add a subtask…" />
-            <button type="submit" className="ghost">＋</button>
+            <span className="plus">＋</span>
+            <input value={newSub} onChange={(e) => setNewSub(e.target.value)} placeholder="Add item" />
           </form>
-          <div className="row subtask-footer">
-            <button className="danger" onClick={() => confirm('Delete this task?') && saveItem({ id: t.id, deleted: true })}>
-              Delete task
-            </button>
+
+          <div className="detail-foot">
+            <span className="hint">Tap the title to edit</span>
+            <button className="overflow" aria-label="More actions" onClick={() => setMenu(!menu)}>⋯</button>
           </div>
+          {menu && (
+            <div className="menu" role="menu">
+              <button className="danger" onClick={() => { if (confirm('Delete this task?')) saveItem({ id: t.id, deleted: true }); setMenu(false); }}>
+                Delete task
+              </button>
+            </div>
+          )}
         </div>
       )}
     </li>
+  );
+}
+
+function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
+  const [install, setInstall] = useState(null); // captured beforeinstallprompt event
+
+  useEffect(() => {
+    const onPrompt = (e) => { e.preventDefault(); setInstall(e); };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
+
+  return (
+    <main className="screen">
+      <span className="eyebrow">Settings · Notes &amp; Tasks</span>
+      <p className="lead" style={{ marginTop: 8 }}>One place for both — everything here applies across the whole app.</p>
+
+      <div className="card set-card">
+        <span className="eyebrow">Appearance</span>
+        <div className="toggle">
+          {[['paper', '📜 Paper'], ['dark', '🌙 Lights out']].map(([m, label]) => (
+            <button key={m} className={mode === m ? 'on' : ''} onClick={() => setAppMode(m)}>{label}</button>
+          ))}
+        </div>
+        <p className="lead" style={{ marginTop: 10 }}>Same warm design either way — paper for daylight, lights out for late nights.</p>
+      </div>
+
+      <div className="card set-card">
+        <span className="eyebrow">Account &amp; sync</span>
+        <div className="set-row">
+          <span>Google Drive</span>
+          <span className={'status-pill' + (signedIn ? '' : ' off')} style={{ marginLeft: 'auto' }}>
+            {signedIn ? (STATUS_LABEL[status] || status) : 'not connected'}
+          </span>
+        </div>
+        <div className="set-row"><span>Stored on this device</span><span className="val">{itemCount} item{itemCount === 1 ? '' : 's'}</span></div>
+        <div className="btn-row">
+          {signedIn
+            ? <button className="btn" onClick={onSignOut}>Sign out</button>
+            : <button className="btn accent" onClick={onSignIn}>Connect Google Drive</button>}
+        </div>
+        <p className="lead" style={{ marginTop: 12 }}>Your notes and tasks sync only through your own Drive — no server of ours ever sees them.</p>
+      </div>
+
+      <div className="card set-card">
+        <span className="eyebrow">App</span>
+        <div className="btn-row" style={{ marginTop: 0 }}>
+          {install
+            ? <button className="btn accent" onClick={async () => { install.prompt(); await install.userChoice; setInstall(null); }}>📲 Install app</button>
+            : <span className="lead">Add to your home screen from the browser menu to install.</span>}
+        </div>
+      </div>
+
+      <div className="card set-card" style={{ color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        <span className="eyebrow" style={{ marginBottom: 8 }}>About</span>
+        Nisaba — notes &amp; tasks that live in your own Google Drive as plain JSON that outlives the app.
+        No accounts of ours, no analytics. Named for the Sumerian goddess of writing.
+      </div>
+    </main>
   );
 }
 
@@ -309,7 +440,7 @@ function NoteEditor({ item, engine, saveItem, onClose }) {
   const [body, setBody] = useState(item.body);
   const [tags, setTags] = useState(item.tags.join(', '));
   const [attachments, setAttachments] = useState(item.attachments || []);
-  const [thumbs, setThumbs] = useState({}); // attId -> objectURL
+  const [thumbs, setThumbs] = useState({});
 
   useEffect(() => {
     let dead = false;
@@ -347,7 +478,7 @@ function NoteEditor({ item, engine, saveItem, onClose }) {
   }
 
   return (
-    <div className="overlay">
+    <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
       <div className="panel">
         <input className="editor-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" autoFocus />
         <textarea
@@ -359,27 +490,25 @@ function NoteEditor({ item, engine, saveItem, onClose }) {
           }}
           placeholder="Write your note… (paste screenshots directly)"
         />
-        <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" />
+        <input className="tag-input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" />
         {attachments.length > 0 && (
           <div className="thumbs">
             {attachments.map((att) => (
               <figure key={att.id}>
-                {thumbs[att.id]
-                  ? <img src={thumbs[att.id]} alt={att.name} />
-                  : <span className="muted">loading…</span>}
+                {thumbs[att.id] ? <img src={thumbs[att.id]} alt={att.name} /> : <span className="lead">loading…</span>}
                 <figcaption>{att.name}</figcaption>
               </figure>
             ))}
           </div>
         )}
         <div className="row">
-          <label className="ghost file-btn">
+          <label className="file-btn">
             📎 Attach
             <input type="file" accept="image/*" multiple hidden onChange={(e) => attachFiles([...e.target.files])} />
           </label>
-          <button className="danger" onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
+          <button className="btn ghost" style={{ color: 'var(--overdue)' }} onClick={async () => { await saveItem({ id: item.id, deleted: true }); onClose(); }}>Delete</button>
           <span className="spacer" />
-          <button className="primary" onClick={close}>Done</button>
+          <button className="btn accent" onClick={close}>Done</button>
         </div>
       </div>
     </div>
@@ -389,8 +518,8 @@ function NoteEditor({ item, engine, saveItem, onClose }) {
 function SetupScreen({ onSave }) {
   const [value, setValue] = useState('');
   return (
-    <div className="shell setup">
-      <h1><Logo /> Nisaba</h1>
+    <div className="setup">
+      <div className="brand"><Logo size={34} /> <span className="word">NISA<b>BA</b></span></div>
       <p>
         One-time setup: this app syncs through <strong>your own Google Drive</strong>, so it
         needs a Google OAuth Client ID you create for yourself. Follow{' '}
@@ -400,10 +529,10 @@ function SetupScreen({ onSave }) {
         (~15 minutes), then paste the Client ID here.
       </p>
       <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="1234567890-abc…apps.googleusercontent.com" />
-      <button className="primary" disabled={!value.includes('.apps.googleusercontent.com')} onClick={() => onSave(value.trim())}>
+      <button className="btn accent" disabled={!value.includes('.apps.googleusercontent.com')} onClick={() => onSave(value.trim())}>
         Save
       </button>
-      <p className="muted">The Client ID is not a secret — it only identifies the app to Google. Your notes never touch any server except Google Drive.</p>
+      <p className="lead">The Client ID is not a secret — it only identifies the app to Google. Your notes never touch any server except Google Drive.</p>
     </div>
   );
 }

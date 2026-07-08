@@ -34,9 +34,8 @@ often drive sessions from it, so keep instructions and UI phone-first.
   `DEFAULT_CLIENT_ID`):
   `652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com`
   Authorized origins: `https://pbparthas.github.io`, `http://localhost:5173`.
-- **UNVERIFIED:** whether the owner completed "Publish app → In production" on
-  the Google consent screen (Audience page). If still Testing, their sign-in
-  dies every 7 days. **Ask them early.**
+- **Consent screen: In production** (confirmed by the owner 2026-07-08) — so
+  sign-in no longer dies every 7 days. `drive.file` needs no verification.
 
 ## Architecture (see docs/PLAN.md for the approved plan, RESEARCH.md for why)
 
