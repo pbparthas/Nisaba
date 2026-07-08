@@ -289,7 +289,20 @@ input, textarea, button { font-family: inherit; }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 14px; }
 .set-row + .set-row { border-top: 1px solid var(--line); }
 .set-row .val { margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; }
-.ink-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+/* grouped note-text preference list */
+.pref { padding: 12px 0; }
+.pref + .pref { border-top: 1px solid var(--line); }
+.pref > label { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.seg { display: flex; gap: 6px; }
+.seg.wrap { flex-wrap: wrap; }
+.seg button {
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 8px 13px; border-radius: 9px; color: var(--ink);
+  background: transparent; border: 1px solid var(--line);
+}
+.seg button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+
+.ink-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .ink-chip {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink);
@@ -374,17 +387,28 @@ input, textarea, button { font-family: inherit; }
 }
 .panel textarea:focus { outline: none; }
 /* BlockNote editor — blend it into the paper/dark sheet, honouring the user's
-   chosen note font + ink. */
+   chosen note typography. Text colour is the note ink; the placeholder / help
+   text is a muted tone so it reads on any note background colour. */
 .bn-wrap { min-height: 40dvh; }
 .bn-wrap .bn-container {
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: var(--note-ink, var(--ink));
+  --bn-colors-side-menu: var(--muted);
   --bn-font-family: var(--note-font, "Inter", system-ui, sans-serif);
   background: transparent;
 }
-.bn-wrap .bn-editor { padding-inline: 0; }
-/* keep the slash / suggestion menu compact so it fits above the keyboard */
-.bn-suggestion-menu, [class*="bn-suggestion"] { max-height: 44dvh; overflow-y: auto; }
+.bn-wrap .bn-editor {
+  padding-inline: 0;
+  font-size: var(--note-size, 16.5px);
+  font-weight: var(--note-weight, 400);
+  font-style: var(--note-style, normal);
+}
+/* placeholder / empty-block hint reconciled with the note background */
+.bn-wrap .bn-editor .bn-inline-content:empty::before,
+.bn-wrap [class*="is-empty"]::before,
+.bn-wrap [data-placeholder]::before {
+  color: color-mix(in srgb, var(--note-ink, var(--ink)) 45%, transparent) !important;
+}
 
 /* per-note colour swatch picker (in the editor) */
 .swatches { display: flex; gap: 10px; align-items: center; padding: 4px 0; }

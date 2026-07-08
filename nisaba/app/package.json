@@ -19,6 +19,8 @@
     "@blocknote/react": "^0.51.4",
     "@fontsource/great-vibes": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
+    "@fontsource/lora": "^5.2.8",
+    "@fontsource/nunito": "^5.2.7",
     "@fontsource/sacramento": "^5.2.8",
     "@fontsource/saira-condensed": "^5.2.8",
     "@fontsource/spectral": "^5.2.8",

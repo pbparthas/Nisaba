@@ -10,6 +10,11 @@ import '@fontsource/saira-condensed/800.css';
 import '@fontsource/great-vibes/400.css';
 import '@fontsource/spectral/400.css';
 import '@fontsource/spectral/500.css';
+import '@fontsource/lora/400.css';
+import '@fontsource/lora/500.css';
+import '@fontsource/nunito/400.css';
+import '@fontsource/nunito/500.css';
+import '@fontsource/nunito/600.css';
 
 import App from './App.jsx';
 import './styles.css';

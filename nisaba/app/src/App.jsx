@@ -7,8 +7,8 @@ import { newItem } from './lib/merge.js';
 import { getMode, applyMode } from './lib/theme.js';
 import { blocksToText } from './lib/notebody.js';
 import {
-  getNoteFont, getNoteInk, setNoteFont, setNoteInk,
-  NOTE_FONT_OPTIONS, NOTE_INK_OPTIONS,
+  getNoteFont, getNoteSize, getNoteWeight, getNoteStyle, getNoteInk, setNotePref,
+  NOTE_FONTS, NOTE_FONT_OPTIONS, NOTE_SIZE_OPTIONS, NOTE_WEIGHT_OPTIONS, NOTE_STYLE_OPTIONS, NOTE_INK_OPTIONS,
 } from './lib/notePrefs.js';
 
 const store = createIdbStore();
@@ -392,8 +392,19 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
 
 function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
   const [install, setInstall] = useState(null); // captured beforeinstallprompt event
-  const [noteFont, setNoteFontState] = useState(getNoteFont);
-  const [noteInk, setNoteInkState] = useState(getNoteInk);
+  const [prefs, setPrefs] = useState(() => ({
+    font: getNoteFont(), size: getNoteSize(), weight: getNoteWeight(), style: getNoteStyle(), ink: getNoteInk(),
+  }));
+  const updatePref = (kind, val) => { setNotePref(kind, val); setPrefs((p) => ({ ...p, [kind]: val })); };
+  const seg = (kind, options, renderLabel) => (
+    <div className="seg wrap">
+      {options.map(([k, l]) => (
+        <button key={k} className={prefs[kind] === k ? 'on' : ''} onClick={() => updatePref(kind, k)}>
+          {renderLabel ? renderLabel(k, l) : l}
+        </button>
+      ))}
+    </div>
+  );
 
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstall(e); };
@@ -418,24 +429,33 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
 
       <div className="card set-card">
         <span className="eyebrow">Note text</span>
-        <div className="toggle">
-          {NOTE_FONT_OPTIONS.map(([k, label]) => (
-            <button
-              key={k}
-              className={noteFont === k ? 'on' : ''}
-              style={{ fontFamily: k === 'serif' ? '"Spectral", serif' : k === 'mono' ? 'ui-monospace, monospace' : 'inherit' }}
-              onClick={() => { setNoteFont(k); setNoteFontState(k); }}
-            >{label}</button>
-          ))}
+        <div className="pref">
+          <label>Font</label>
+          {seg('font', NOTE_FONT_OPTIONS, (k, l) => <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>)}
         </div>
-        <div className="ink-row">
-          {NOTE_INK_OPTIONS.map(([k, label]) => (
-            <button key={k} className={'ink-chip' + (noteInk === k ? ' on' : '')} onClick={() => { setNoteInk(k); setNoteInkState(k); }}>
-              <span className="ink-dot" data-ink={k} />{label}
-            </button>
-          ))}
+        <div className="pref">
+          <label>Size</label>
+          {seg('size', NOTE_SIZE_OPTIONS)}
         </div>
-        <p className="lead" style={{ marginTop: 10 }}>Font &amp; colour for note text. Each note's background colour is set inside the note.</p>
+        <div className="pref">
+          <label>Weight</label>
+          {seg('weight', NOTE_WEIGHT_OPTIONS, (k, l) => <span style={{ fontWeight: k === 'semibold' ? 600 : k === 'medium' ? 500 : 400 }}>{l}</span>)}
+        </div>
+        <div className="pref">
+          <label>Style</label>
+          {seg('style', NOTE_STYLE_OPTIONS, (k, l) => <span style={{ fontStyle: k }}>{l}</span>)}
+        </div>
+        <div className="pref">
+          <label>Colour</label>
+          <div className="ink-row">
+            {NOTE_INK_OPTIONS.map(([k, label]) => (
+              <button key={k} className={'ink-chip' + (prefs.ink === k ? ' on' : '')} onClick={() => updatePref('ink', k)}>
+                <span className="ink-dot" data-ink={k} />{label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="lead" style={{ marginTop: 12 }}>Applies to all note text. Each note's background colour is set inside the note.</p>
       </div>
 
       <div className="card set-card">

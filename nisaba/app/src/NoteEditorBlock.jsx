@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { useCreateBlockNote, SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react';
+import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
-import { filterSuggestionItems } from '@blocknote/core';
 import '@blocknote/mantine/style.css';
 import { toInitialBlocks } from './lib/notebody.js';
 import { NOTE_COLORS } from './lib/notePrefs.js';
@@ -14,13 +13,6 @@ import { NOTE_COLORS } from './lib/notePrefs.js';
 
    Existing notes open READ-ONLY (no keyboard) with an Edit button; only a
    freshly created note (item._new) opens straight into edit mode. */
-
-// A curated, essentials-only slash menu — the full default list overflows
-// behind the on-screen keyboard on a phone, so we keep the common blocks.
-const SLASH_TITLES = new Set([
-  'Paragraph', 'Heading 1', 'Heading 2', 'Heading 3',
-  'Bullet List', 'Numbered List', 'Check List', 'Quote', 'Image', 'Table',
-]);
 
 export default function NoteEditorBlock({ item, store, engine, saveItem, mode, onClose }) {
   const [title, setTitle] = useState(item.title);
@@ -77,16 +69,7 @@ export default function NoteEditorBlock({ item, store, engine, saveItem, mode, o
         )}
 
         <div className="bn-wrap">
-          <BlockNoteView editor={editor} editable={editMode} theme={mode === 'dark' ? 'dark' : 'light'} slashMenu={false}>
-            <SuggestionMenuController
-              triggerCharacter="/"
-              getItems={async (query) =>
-                filterSuggestionItems(
-                  getDefaultReactSlashMenuItems(editor).filter((i) => SLASH_TITLES.has(i.title)),
-                  query,
-                )}
-            />
-          </BlockNoteView>
+          <BlockNoteView editor={editor} editable={editMode} theme={mode === 'dark' ? 'dark' : 'light'} />
         </div>
 
         {editMode ? (
