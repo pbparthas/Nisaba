@@ -14,20 +14,22 @@ const store = createIdbStore();
 // stores the override in localStorage.
 const DEFAULT_CLIENT_ID = '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
 
-/* Nisaba mark — a clay tablet with two ruled lines, a cuneiform wedge and a
-   reed stylus. Theme-aware: the tablet frame + ruling take the current ink
-   colour, the wedge + stylus take the accent, so it prints correctly on paper,
-   in lights-out, and as the app icon. (Named for the Sumerian goddess of
-   writing; the tablet + reed + wedge are her instruments.) */
-function Logo({ size = 26 }) {
+/* Nisaba mark — an eight-fold star-rosette (the star of Inanna / Mesopotamian
+   rosette; the same eight-point motif with rounded petals and rays between).
+   Strictly 8-fold by design. Theme-aware: petals take the current ink colour,
+   the rays + core take the accent — so it prints on paper, in lights-out, and
+   as the app icon. Eight ellipse-petals + eight rays offset 22.5°. */
+function Logo({ size = 30 }) {
+  const petals = Array.from({ length: 8 }, (_, k) => (
+    <ellipse key={'p' + k} cx="32" cy="15" rx="4.2" ry="9" fill="none" stroke="currentColor" strokeWidth="2.1" transform={`rotate(${k * 45} 32 32)`} />
+  ));
+  const rays = Array.from({ length: 8 }, (_, k) => (
+    <line key={'r' + k} x1="32" y1="32" x2="32" y2="13" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" transform={`rotate(${k * 45 + 22.5} 32 32)`} />
+  ));
   return (
     <svg className="logo" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect x="12" y="6" width="40" height="52" rx="10" fill="none" stroke="currentColor" strokeWidth="4" />
-      <line x1="20" y1="19" x2="44" y2="19" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" opacity="0.5" />
-      <line x1="20" y1="27" x2="38" y2="27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" opacity="0.5" />
-      <path d="M20 39 h13 l-6.5 8 Z" fill="var(--accent)" />
-      <path d="M36 39 h9 l-4.5 6 Z" fill="var(--accent)" opacity="0.7" />
-      <path d="M43 31 L27 51" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" />
+      {petals}{rays}
+      <circle cx="32" cy="32" r="4.5" fill="var(--accent)" />
     </svg>
   );
 }
@@ -123,8 +125,8 @@ export default function App() {
       <header className="hdr">
         <div className="hdr-inner">
           <a className="brand" href="#" onClick={(e) => { e.preventDefault(); setTab('notes'); }}>
-            <Logo size={26} />
-            <span className="word">NISA<b>BA</b></span>
+            <Logo size={30} />
+            <span className="word">Nisaba</span>
           </a>
           <span className="spacer" />
           <span className={'status ' + statusKey}>{STATUS_LABEL[status] || status}</span>
@@ -519,7 +521,7 @@ function SetupScreen({ onSave }) {
   const [value, setValue] = useState('');
   return (
     <div className="setup">
-      <div className="brand"><Logo size={34} /> <span className="word">NISA<b>BA</b></span></div>
+      <div className="brand"><Logo size={44} /> <span className="word big">Nisaba</span></div>
       <p>
         One-time setup: this app syncs through <strong>your own Google Drive</strong>, so it
         needs a Google OAuth Client ID you create for yourself. Follow{' '}

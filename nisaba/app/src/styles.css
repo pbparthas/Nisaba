@@ -76,12 +76,15 @@ input, textarea, button { font-family: inherit; }
   padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top));
   display: flex; align-items: center; gap: 10px;
 }
-.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); }
+.brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+/* Size-aware wordmark: a monoline script (Sacramento) reads at header size;
+   the high-contrast display script (Great Vibes) is used large on setup; below
+   the header the mark alone carries the identity (favicon / app icon). */
 .brand .word {
-  font-family: "Saira Condensed", "Arial Narrow", sans-serif;
-  font-weight: 800; font-size: 22px; letter-spacing: 0.015em; line-height: 1;
+  font-family: "Sacramento", cursive; font-weight: 400;
+  font-size: 30px; line-height: 1; padding-bottom: 3px;
 }
-.brand .word b { color: var(--accent); font-weight: 800; }
+.brand .word.big { font-family: "Great Vibes", cursive; font-size: 52px; padding-bottom: 6px; }
 .logo { display: block; flex: none; }
 .hdr .spacer { flex: 1; }
 .status {
