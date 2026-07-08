@@ -119,20 +119,58 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
   how Enki communicates before designing anything. It consumes the phase-4
   REST/MCP surface.
 
-## UX status and direction (owner cares about this a lot)
+## DESIGN BRIEF — full visual redesign required (owner's explicit request)
 
-The owner disliked the first UI pass and asked for proper polish. A v2 pass
-shipped at the end of the prior session: inline SVG logo mark next to the
-wordmark, quiet status pill instead of a giant connect button, tasks grouped
-into Overdue / Today / Upcoming / Done with relative due labels ("tomorrow",
-"3d late"), tap-to-edit task title/due date in the expanded panel, floating
-＋ button for notes, last-edited stamps on note cards, friendlier empty
-states. Reference the owner named: **Golazo** (goal-tracking app by WowMakers;
-creamy background, white cards, playful) — its case-study page blocks fetching,
-so the theme was built from description. If the owner shares screenshots of
-UIs they like, match them. Likely next asks: better typography, subtle motion,
-a real agenda/home view (phase 3), dark-mode toggle. Always send a screenshot
-(Playwright, 420px viewport) with UI changes and expect iteration.
+Two UI passes shipped (dark spike, then a cream theme with orange accent,
+logo mark, task sections, inline editing). The owner reviewed v2 on their
+Android phone and rejected it: **"very shoddy"**. This redesign is the
+top-priority task alongside phase 2, and the owner expects it done properly.
+
+### The owner's verdict on v2, verbatim themes
+
+1. **"Orange is not the color."** Drop the orange accent entirely.
+2. **"Logo and text can be even better."** The rounded-square tablet glyph +
+   plain bold system-font "Nisaba" wordmark are weak.
+3. **"The placement of the fields looks like some very basic web page."**
+   The UI reads as stacked HTML form controls, not a designed app.
+
+### What specifically looks wrong (from the owner's screenshot of the Tasks tab)
+
+- Add-task row = three mismatched bordered boxes (text input / "DUE DATE"
+  dropdown / Add pill) sitting in a row like a web form.
+- Expanding a task shows the title AGAIN as a bordered input directly under
+  the task's own header — duplicated text, obviously a form field.
+- Bordered rounded input boxes everywhere; ALL-CAPS field captions ("DUE
+  DATE"); a lonely outlined "Delete task" pill at the card's bottom-left;
+  stray ✕ icons right-aligned per subtask; header status pill + "Sign out"
+  text link feel bolted on. Everything is boxes-in-boxes.
+
+### Redesign direction (agree the direction with the owner BEFORE building)
+
+- **Palette:** keep the creamy-white canvas (owner chose it; Golazo
+  reference), replace orange with a calmer accent — mock 2–3 options (e.g.
+  deep forest green, ink/charcoal with a warm neutral, muted terracotta-free
+  alternatives) as rendered screenshots and let the owner pick via
+  AskUserQuestion. Do not ship a palette the owner hasn't seen.
+- **Kill the web-form look:** edit-in-place text (no visible input borders
+  until focus), due date as a small tappable chip that opens the native
+  picker (not a captioned dropdown box), a single "+ Add task" affordance
+  instead of the three-box row, subtask add as a ghost row ("+ Add item"),
+  delete via an overflow/long-press action rather than a standing button,
+  no ALL-CAPS labels.
+- **Task card anatomy:** expanded view should feel like the same card
+  deepening (title stays a heading, tap it to edit in place; metadata as
+  chips under it) — never a second copy of the title in a box.
+- **Typography:** bundle a proper typeface (self-hosted; e.g. Manrope or
+  Inter for UI + something characterful for the wordmark) with a real scale;
+  system-font-bold everywhere is part of the "shoddy" read.
+- **Logo:** design a proper mark — Nisaba is the Sumerian goddess of writing
+  (clay tablet / reed stylus / grain motifs are on-theme). Deliver as: header
+  mark + wordmark lockup, favicon, and maskable 192/512 PNG icons for the
+  Android install prompt (current SVG-only manifest icon is also weak there).
+- **Quality bar:** Things 3 / Todoist-level finish. The owner reviews on a
+  ~420px Android screen; ship every iteration as a Playwright screenshot at
+  that width and expect several rounds of specific feedback.
 
 ## Auth behavior (understand before touching)
 
