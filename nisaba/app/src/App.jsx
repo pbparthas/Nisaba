@@ -168,7 +168,7 @@ export default function App() {
             ))}
           </ul>
           {notes.length === 0 && <p className="empty">Capture your first note with the ＋ button.</p>}
-          <button className="fab" aria-label="New note" onClick={async () => setEditing(await saveItem({ type: 'note' }))}>＋</button>
+          <button className="fab" aria-label="New note" onClick={async () => { const n = await saveItem({ type: 'note' }); setEditing({ ...n, _new: true }); }}>＋</button>
         </main>
       )}
 

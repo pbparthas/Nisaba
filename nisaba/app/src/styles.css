@@ -366,6 +366,8 @@ input, textarea, button { font-family: inherit; }
   border-bottom: 1.5px solid transparent;
 }
 .editor-title:focus { outline: none; border-bottom-color: var(--accent); }
+.editor-title-read { font-size: 20px; font-weight: 700; color: var(--ink); padding: 4px 0; }
+.muted-title { color: var(--muted); font-weight: 600; }
 .panel textarea {
   border: none; background: none; color: var(--ink); resize: vertical;
   min-height: 38dvh; font-size: 15px; line-height: 1.55; padding: 0;
