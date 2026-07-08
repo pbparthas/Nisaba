@@ -123,13 +123,23 @@ Claude Code. What it is:
   redirect URI on the existing Web OAuth client). Refresh token stays in
   Cloudflare KV; only a session cookie sits on disk.
 
-**Remaining for Phase 4 (on the owner's Linux box — can't compile Tauri in the
-cloud sandbox):** `nisaba/desktop/` has a Tauri v2 scaffold that wraps the built
-web app and spawns the service. To finish: `cargo`/Tauri prereqs, `npm run
-icons`, `npm run build`; package the service as a Tauri sidecar (Node SEA or
-`bun build --compile`) so end users don't need Node; verify the live
-`claude mcp add` connect. See `service/README.md` and `desktop/README.md`.
-- **Setup guide + steps:** `nisaba/service/README.md`.
+**Linux desktop app (`nisaba/desktop/`, Tauri v2) — BUILT, pending on-device
+compile.** The window shows the same web UI and authenticates **through the
+service**: Google blocks its sign-in JS in webviews, so the shell
+(`src-tauri/src/main.rs`) reads the service bearer token from
+`~/.config/nisaba/service.json` and injects
+`window.__NISABA_SERVICE__ = { base, token }` before the page loads; the app's
+`lib/auth.js` gained a "service mode" that calls the service's new
+`GET /token` for Drive access tokens (no GIS in the webview). The window runs
+its own in-browser sync engine (two replicas sharing one Drive, like two
+devices — the conflict engine handles it). The shell **connects** to the
+already-running (systemd) service; it does not spawn its own, avoiding the
+port collision. Can't be compiled in the cloud sandbox (no display / no
+webkit2gtk); the token-parser + `/token` + service-auth mode are unit-tested,
+the GUI needs `cargo`/Tauri build on the Linux box. Remaining polish: bundle
+the service as a Tauri sidecar (Node SEA / `bun build --compile`) so end users
+don't need Node. Steps in `desktop/README.md`.
+- **Setup guide + steps:** `nisaba/service/README.md` and `desktop/README.md`.
 
 ### Phase 5 — Enki adapter
 - Enki is the owner's own tool; its protocol is STILL UNKNOWN. Ask the owner

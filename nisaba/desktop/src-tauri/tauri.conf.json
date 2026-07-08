@@ -4,21 +4,14 @@
   "version": "1.0.0",
   "identifier": "dev.orionforge.nisaba",
   "build": {
-    "beforeDevCommand": "cd ../../app && npm run dev",
+    "beforeDevCommand": "cd ../app && npm run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "cd ../../app && npm install && npm run build",
+    "beforeBuildCommand": "cd ../app && npm install && npm run build",
     "frontendDist": "../../app/dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Nisaba",
-        "width": 440,
-        "height": 860,
-        "minWidth": 360,
-        "resizable": true
-      }
-    ],
+    "withGlobalTauri": true,
+    "windows": [],
     "security": {
       "csp": null
     }

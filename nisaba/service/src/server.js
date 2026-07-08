@@ -115,6 +115,9 @@ export function createServer({ api, token, serverInfo, hooks = {} }) {
 
       if (method === 'POST' && path === '/sync') { await api.sync(); return send(res, 200, { ok: true }); }
 
+      // Drive access token for the desktop webview (bearer-guarded, localhost).
+      if (method === 'GET' && path === '/token') return send(res, 200, await api.getAccessToken());
+
       return send(res, 404, { error: 'not found', path });
     } catch (e) {
       const code = typeof e.code === 'number' && e.code >= 400 && e.code < 600 ? e.code : 500;

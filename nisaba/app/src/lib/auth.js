@@ -33,9 +33,63 @@ function loadGis() {
   return gisReady;
 }
 
+// The desktop (Tauri) shell injects window.__NISABA_SERVICE__ = { base, token }.
+// When present, the webview gets Drive tokens from the local service — the
+// native shell owns the real Google session, so Google's blocked-in-webview
+// sign-in JS is never loaded here.
+function serviceConfig() {
+  try { return (typeof window !== 'undefined' && window.__NISABA_SERVICE__) || null; } catch { return null; }
+}
+
 export function createAuth(clientId) {
+  const svc = serviceConfig();
+  if (svc) return createServiceAuth(svc);
   const worker = workerUrl();
   return worker ? createBackendAuth(clientId, worker) : createTokenAuth(clientId);
+}
+
+// ---------------------------------------------------------------------------
+// Desktop mode (tokens from the local service; used inside the Tauri window)
+// ---------------------------------------------------------------------------
+function createServiceAuth({ base, token: bearer }) {
+  const url = String(base).replace(/\/$/, '');
+  let token = null;
+  let expiresAt = 0;
+
+  async function fetchToken() {
+    const res = await fetch(url + '/token', { headers: { Authorization: `Bearer ${bearer}` } });
+    if (!res.ok) { const e = new Error('service ' + res.status); e.code = res.status; throw e; }
+    const t = await res.json();
+    token = t.access_token;
+    expiresAt = Date.now() + ((t.expires_in || 300) - 60) * 1000;
+    localStorage.setItem('ns_signed_in', '1');
+    return token;
+  }
+
+  return {
+    async signIn() {
+      try {
+        await fetchToken(); // the service already did the real OAuth; just confirm
+      } catch (e) {
+        if (e.code === 401) {
+          throw new Error('The Nisaba service is running but not connected to Google yet — start it once with `node src/main.js` and complete the browser sign-in, then reopen.');
+        }
+        throw new Error(`Can't reach the Nisaba service at ${url}. Make sure it's running.`);
+      }
+    },
+    async getToken() {
+      if (token && Date.now() < expiresAt) return token;
+      return fetchToken();
+    },
+    isSignedIn: () => localStorage.getItem('ns_signed_in') === '1',
+    signOut() {
+      token = null;
+      expiresAt = 0;
+      localStorage.removeItem('ns_signed_in');
+      // The Google session lives in the service — fully sign out with
+      // `node src/main.js sign-out` (or the systemd equivalent).
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

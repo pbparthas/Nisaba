@@ -11,9 +11,12 @@ import { blocksToText } from '../../app/src/lib/notebody.js';
 
 const todayISO = (d = new Date()) => d.toISOString().slice(0, 10);
 
-export function createApi({ store, getToken, driveBaseUrl, onStatus = () => {}, autoSync = true }) {
+export function createApi({ store, getToken, getAccessToken, driveBaseUrl, onStatus = () => {}, autoSync = true }) {
   const drive = createDriveClient({ getToken, baseUrl: driveBaseUrl });
   const engine = createSyncEngine({ store, drive, onStatus });
+  // Used by the /token endpoint (desktop webview). Falls back to wrapping
+  // getToken with a conservative lifetime if a richer provider wasn't given.
+  const accessToken = getAccessToken || (async () => ({ access_token: await getToken(), expires_in: 3000 }));
 
   // Upsert an item the way the app's saveItem does: stamp updated_at, mark
   // dirty, persist, then let the engine push it. Callers that update an
@@ -52,6 +55,9 @@ export function createApi({ store, getToken, driveBaseUrl, onStatus = () => {}, 
   return {
     drive,
     engine,
+
+    // A fresh Drive access token for the desktop webview (see /token).
+    async getAccessToken() { return accessToken(); },
 
     // Pull the latest from Drive before serving reads/writes. Best-effort: if
     // the network or auth is down we still operate on the local replica.

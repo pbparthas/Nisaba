@@ -130,6 +130,13 @@ export function createWorkerAuth({ workerUrl, clientId, redirectUri, sessionFile
       return token;
     },
 
+    // For the desktop app's webview: hand it a fresh Drive access token (it does
+    // its own sync but never touches Google's blocked-in-webview sign-in JS).
+    async getAccessToken() {
+      const access_token = await this.getToken();
+      return { access_token, expires_in: Math.max(60, Math.floor((expiresAt - Date.now()) / 1000)) };
+    },
+
     async isSignedIn() { await loadSession(); return !!cookie; },
 
     async signOut() {

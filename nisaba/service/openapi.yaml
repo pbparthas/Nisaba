@@ -167,6 +167,22 @@ paths:
       summary: Force a Drive sync now
       responses:
         '200': { description: '{ ok: true }' }
+  /token:
+    get:
+      summary: A fresh Google Drive access token for the desktop webview
+      description: >
+        Used by the Tauri desktop shell so the in-window app can sync to Drive
+        without Google's blocked-in-webview sign-in. Bearer-guarded, localhost.
+      responses:
+        '200':
+          description: Access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  expires_in: { type: integer, description: seconds until expiry }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }

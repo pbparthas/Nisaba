@@ -60,6 +60,14 @@ describe('discovery + auth', () => {
     const res = await req('GET', '/notes', { token: null });
     expect(res.status).toBe(401);
   });
+
+  it('GET /token returns a Drive access token for the desktop webview', async () => {
+    const unauth = await req('GET', '/token', { token: null });
+    expect(unauth.status).toBe(401);
+    const res = await (await req('GET', '/token')).json();
+    expect(res.access_token).toBe('fake-drive-access-token'); // from the getToken stub
+    expect(res.expires_in).toBeGreaterThan(0);
+  });
 });
 
 describe('REST notes + tasks', () => {

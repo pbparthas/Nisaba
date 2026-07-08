@@ -54,6 +54,7 @@ async function main() {
   const api = createApi({
     store,
     getToken: () => auth.getToken(),
+    getAccessToken: () => auth.getAccessToken(),
     driveBaseUrl: undefined, // real Google
     onStatus: (s) => process.env.NISABA_DEBUG && console.log('[sync]', s),
   });
