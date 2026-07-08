@@ -41,22 +41,26 @@
 /* Note text ink (user choice, theme-aware). Only the key is stored; the value
    resolves here so every option stays legible on paper and in dark. */
 :root { --note-ink: var(--ink); }
-:root[data-note-ink="sepia"] { --note-ink: #5b4a2f; }
-:root[data-note-ink="forest"] { --note-ink: #2f5d3a; }
-:root[data-note-ink="slate"] { --note-ink: #384252; }
-:root[data-mode="dark"][data-note-ink="sepia"] { --note-ink: #dcc7a0; }
-:root[data-mode="dark"][data-note-ink="forest"] { --note-ink: #7fc79b; }
-:root[data-mode="dark"][data-note-ink="slate"] { --note-ink: #aab6c6; }
+:root[data-note-ink="sepia"] { --note-ink: #6b5636; }
+:root[data-note-ink="forest"] { --note-ink: #2f6b43; }
+:root[data-note-ink="wine"] { --note-ink: #8a3033; }
+:root[data-note-ink="navy"] { --note-ink: #2a3f6b; }
+:root[data-note-ink="plum"] { --note-ink: #5f3a63; }
+:root[data-mode="dark"][data-note-ink="sepia"] { --note-ink: #d8b98a; }
+:root[data-mode="dark"][data-note-ink="forest"] { --note-ink: #6fc79b; }
+:root[data-mode="dark"][data-note-ink="wine"] { --note-ink: #e08a8c; }
+:root[data-mode="dark"][data-note-ink="navy"] { --note-ink: #8aa6e0; }
+:root[data-mode="dark"][data-note-ink="plum"] { --note-ink: #c79bd0; }
 
 /* Per-note background palette (theme-aware); painted via .card[data-color]. */
 :root {
   --nc-default: var(--card);
-  --nc-sage: #e3ead9; --nc-sky: #dbe5ec; --nc-sand: #efe1c9;
-  --nc-blush: #f0e1dd; --nc-stone: #e7e1d4;
+  --nc-rose: #f0d3cf; --nc-amber: #f0dcb0; --nc-sage: #d3e2c2; --nc-teal: #c3e0da;
+  --nc-sky: #cbdcea; --nc-lavender: #ded9ec; --nc-clay: #ecd3ba;
 }
 :root[data-mode="dark"] {
-  --nc-sage: #1b241c; --nc-sky: #171f27; --nc-sand: #241e16;
-  --nc-blush: #261c1b; --nc-stone: #221f18;
+  --nc-rose: #301d1f; --nc-amber: #2d2714; --nc-sage: #1d2a1c; --nc-teal: #14282a;
+  --nc-sky: #16222e; --nc-lavender: #211d2b; --nc-clay: #2a2016;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -144,13 +148,35 @@ input, textarea, button { font-family: inherit; }
 .card {
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 15px;
+  position: relative;
 }
+/* multi-select */
+.card.selected { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+.selcheck {
+  position: absolute; top: 10px; right: 12px; z-index: 2;
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  border: 1.5px solid var(--muted); background: var(--surface, transparent);
+  display: grid; place-items: center; font-size: 13px; line-height: 0; color: transparent;
+}
+.card.task .selcheck { position: static; }
+.selected .selcheck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.selbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 25;
+  background: var(--chrome); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--line);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 12px;
+}
+.selbar .selcount { flex: 1; text-align: center; font-weight: 700; font-size: 14px; }
+.btn.danger-fill { background: var(--overdue); color: #fff; border-color: transparent; }
 /* per-note background colour */
+.card[data-color="rose"], .panel[data-color="rose"] { background: var(--nc-rose); }
+.card[data-color="amber"], .panel[data-color="amber"] { background: var(--nc-amber); }
 .card[data-color="sage"], .panel[data-color="sage"] { background: var(--nc-sage); }
+.card[data-color="teal"], .panel[data-color="teal"] { background: var(--nc-teal); }
 .card[data-color="sky"], .panel[data-color="sky"] { background: var(--nc-sky); }
-.card[data-color="sand"], .panel[data-color="sand"] { background: var(--nc-sand); }
-.card[data-color="blush"], .panel[data-color="blush"] { background: var(--nc-blush); }
-.card[data-color="stone"], .panel[data-color="stone"] { background: var(--nc-stone); }
+.card[data-color="lavender"], .panel[data-color="lavender"] { background: var(--nc-lavender); }
+.card[data-color="clay"], .panel[data-color="clay"] { background: var(--nc-clay); }
 
 /* ---------- notes ---------- */
 .note { cursor: pointer; }
@@ -311,9 +337,11 @@ input, textarea, button { font-family: inherit; }
 .ink-chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
 .ink-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
 .ink-dot[data-ink="default"] { background: var(--ink); }
-.ink-dot[data-ink="sepia"] { background: #5b4a2f; }
-.ink-dot[data-ink="forest"] { background: #2f5d3a; }
-.ink-dot[data-ink="slate"] { background: #384252; }
+.ink-dot[data-ink="sepia"] { background: #6b5636; }
+.ink-dot[data-ink="forest"] { background: #2f6b43; }
+.ink-dot[data-ink="wine"] { background: #8a3033; }
+.ink-dot[data-ink="navy"] { background: #2a3f6b; }
+.ink-dot[data-ink="plum"] { background: #5f3a63; }
 
 .toggle { display: flex; gap: 8px; }
 .toggle button {

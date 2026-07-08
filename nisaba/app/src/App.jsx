@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { createIdbStore } from './lib/store-idb.js';
 import { createAuth } from './lib/auth.js';
 import { createDriveClient } from './lib/drive.js';
@@ -15,6 +15,44 @@ const store = createIdbStore();
 
 // The BlockNote editor is heavy; load it only when a note is opened.
 const NoteEditor = React.lazy(() => import('./NoteEditorBlock.jsx'));
+
+// Long-press to enter multi-select; a normal tap runs onClick. A press that
+// crosses the hold threshold suppresses the click that follows it.
+function useLongPress(onLong, onClick) {
+  const timer = useRef(null);
+  const fired = useRef(false);
+  const start = () => { fired.current = false; timer.current = setTimeout(() => { fired.current = true; onLong(); }, 450); };
+  const cancel = () => clearTimeout(timer.current);
+  return {
+    onPointerDown: start, onPointerUp: cancel, onPointerLeave: cancel, onPointerMove: cancel,
+    onClick: (e) => { if (fired.current) { e.preventDefault(); e.stopPropagation(); return; } onClick(e); },
+  };
+}
+
+const createdAt = (i) => i.created_at || i.updated_at;
+const startOfDay = (ts) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+function dayHeading(ts) {
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return new Date(ts).toLocaleDateString(undefined, { weekday: 'long' });
+  const d = new Date(ts);
+  const opts = d.getFullYear() === new Date().getFullYear()
+    ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' };
+  return d.toLocaleDateString(undefined, opts);
+}
+// Group items into date-created buckets (newest day first).
+function groupByCreated(items) {
+  const sorted = [...items].sort((a, b) => createdAt(b) - createdAt(a));
+  const groups = [];
+  let cur = null;
+  for (const it of sorted) {
+    const key = startOfDay(createdAt(it));
+    if (!cur || cur.key !== key) { cur = { key, label: dayHeading(createdAt(it)), items: [] }; groups.push(cur); }
+    cur.items.push(it);
+  }
+  return groups;
+}
 
 // The owner's OAuth Client ID (public by design — it only identifies the app
 // to Google; access still requires signing in to the matching account).
@@ -62,6 +100,21 @@ export default function App() {
   const [tab, setTab] = useState('notes'); // 'notes' | 'tasks' | 'settings'
   const [editing, setEditing] = useState(null);
   const [mode, setMode] = useState(getMode);
+  const [selMode, setSelMode] = useState(false);
+  const [selIds, setSelIds] = useState(() => new Set());
+
+  const clearSel = useCallback(() => { setSelMode(false); setSelIds(new Set()); }, []);
+  const enterSel = (id) => { setSelMode(true); setSelIds(new Set([id])); };
+  const toggleSel = (id) => setSelIds((prev) => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id);
+    if (n.size === 0) setSelMode(false);
+    return n;
+  });
+  const goTab = (t) => { clearSel(); setTab(t); };
+  async function deleteSel() {
+    for (const id of selIds) await saveItem({ id, deleted: true });
+    clearSel();
+  }
 
   const { auth, engine } = useMemo(() => {
     if (!clientId) return {};
@@ -132,7 +185,7 @@ export default function App() {
     <div className="shell">
       <header className="hdr">
         <div className="hdr-inner">
-          <a className="brand" href="#" onClick={(e) => { e.preventDefault(); setTab('notes'); }}>
+          <a className="brand" href="#" onClick={(e) => { e.preventDefault(); goTab('notes'); }}>
             <Logo size={30} />
             <span className="word">Nisaba</span>
           </a>
@@ -141,7 +194,7 @@ export default function App() {
           <button
             className={'gear' + (tab === 'settings' ? ' active' : '')}
             aria-label="Settings"
-            onClick={() => setTab('settings')}
+            onClick={() => goTab('settings')}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="12" cy="12" r="3.2" />
@@ -153,26 +206,25 @@ export default function App() {
 
       {tab === 'notes' && (
         <main className="screen">
-          <span className="eyebrow">Notes{notes.length ? ' · ' + notes.length : ''}</span>
-          <ul className="list" style={{ listStyle: 'none' }}>
-            {notes.map((n) => (
-              <li key={n.id} className="card note" data-color={n.color || undefined} onClick={() => setEditing(n)}>
-                <h3>{n.title || <em>Untitled</em>}</h3>
-                <p className="snip">{blocksToText(n.body).slice(0, 140) || <span className="faint">No text yet</span>}</p>
-                <div className="meta">
-                  {(n.attachments || []).length > 0 && <span className="chip">📎 {n.attachments.length}</span>}
-                  {n.tags.map((t) => <span key={t} className="chip grain">#{t}</span>)}
-                  <span className="when">{relativeDay(n.updated_at)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {groupByCreated(notes).map((g) => (
+            <section key={g.key} className="section">
+              <span className="eyebrow">{g.label}</span>
+              <ul className="list" style={{ listStyle: 'none' }}>
+                {g.items.map((n) => (
+                  <NoteCard
+                    key={n.id} n={n} selMode={selMode} selected={selIds.has(n.id)}
+                    onOpen={() => setEditing(n)} onToggle={() => toggleSel(n.id)} onLong={() => enterSel(n.id)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
           {notes.length === 0 && <p className="empty">Capture your first note with the ＋ button.</p>}
-          <button className="fab" aria-label="New note" onClick={async () => { const n = await saveItem({ type: 'note' }); setEditing({ ...n, _new: true }); }}>＋</button>
+          {!selMode && <button className="fab" aria-label="New note" onClick={async () => { const n = await saveItem({ type: 'note' }); setEditing({ ...n, _new: true }); }}>＋</button>}
         </main>
       )}
 
-      {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} />}
+      {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} selMode={selMode} selIds={selIds} toggleSel={toggleSel} enterSel={enterSel} />}
 
       {tab === 'settings' && (
         <Settings
@@ -183,18 +235,29 @@ export default function App() {
         />
       )}
 
-      <nav className="tabs" aria-label="Sections">
-        <div className="tabs-inner">
-          <button className={'tab' + (tab === 'notes' ? ' on' : '')} onClick={() => setTab('notes')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v5h5M8.5 13h7M8.5 16.5h5" strokeLinecap="round" /></svg>
-            NOTES
-          </button>
-          <button className={'tab' + (tab === 'tasks' ? ' on' : '')} onClick={() => setTab('tasks')}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6.5l2 2 3.5-4M4 17.5l2 2 3.5-4" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 6.5h7M13 17.5h7" strokeLinecap="round" /></svg>
-            TASKS
-          </button>
+      {selMode ? (
+        <div className="selbar">
+          <button className="btn" onClick={clearSel}>Cancel</button>
+          <span className="selcount">{selIds.size} selected</span>
+          <button
+            className="btn danger-fill"
+            onClick={() => { if (confirm(`Delete ${selIds.size} item${selIds.size > 1 ? 's' : ''}?`)) deleteSel(); }}
+          >Delete</button>
         </div>
-      </nav>
+      ) : (
+        <nav className="tabs" aria-label="Sections">
+          <div className="tabs-inner">
+            <button className={'tab' + (tab === 'notes' ? ' on' : '')} onClick={() => goTab('notes')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v5h5M8.5 13h7M8.5 16.5h5" strokeLinecap="round" /></svg>
+              NOTES
+            </button>
+            <button className={'tab' + (tab === 'tasks' ? ' on' : '')} onClick={() => goTab('tasks')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6.5l2 2 3.5-4M4 17.5l2 2 3.5-4" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 6.5h7M13 17.5h7" strokeLinecap="round" /></svg>
+              TASKS
+            </button>
+          </div>
+        </nav>
+      )}
 
       {editing && (
         <React.Suspense fallback={<div className="overlay"><div className="panel"><p className="lead">Loading editor…</p></div></div>}>
@@ -223,6 +286,22 @@ function relativeDay(ts) {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
+function NoteCard({ n, selMode, selected, onOpen, onToggle, onLong }) {
+  const lp = useLongPress(onLong, () => (selMode ? onToggle() : onOpen()));
+  return (
+    <li className={'card note' + (selected ? ' selected' : '')} data-color={n.color || undefined} {...lp}>
+      <h3>{n.title || <em>Untitled</em>}</h3>
+      <p className="snip">{blocksToText(n.body).slice(0, 140) || <span className="faint">No text yet</span>}</p>
+      <div className="meta">
+        {(n.attachments || []).length > 0 && <span className="chip">📎 {n.attachments.length}</span>}
+        {n.tags.map((t) => <span key={t} className="chip grain">#{t}</span>)}
+        <span className="when">{relativeDay(n.updated_at)}</span>
+      </div>
+      {selMode && <span className="selcheck">{selected ? '✓' : ''}</span>}
+    </li>
+  );
+}
+
 function dueLabel(due, today) {
   if (!due) return null;
   const diff = Math.round((new Date(due) - new Date(today)) / 86400000);
@@ -233,19 +312,17 @@ function dueLabel(due, today) {
   return new Date(due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-function Tasks({ tasks, saveItem }) {
+function Tasks({ tasks, saveItem, selMode, selIds, toggleSel, enterSel }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [openId, setOpenId] = useState(null);
   const today = new Date().toISOString().slice(0, 10);
 
-  const byDue = (a, b) => String(a.due || '~').localeCompare(String(b.due || '~')) || b.updated_at - a.updated_at;
-  const sections = [
-    { name: 'Overdue', alert: true, list: tasks.filter((t) => !t.done && t.due && t.due < today).sort(byDue) },
-    { name: 'Today', list: tasks.filter((t) => !t.done && t.due === today).sort(byDue) },
-    { name: 'Upcoming', list: tasks.filter((t) => !t.done && (!t.due || t.due > today)).sort(byDue) },
-    { name: 'Done', list: tasks.filter((t) => t.done).sort((a, b) => b.updated_at - a.updated_at) },
-  ];
+  // Grouped by date created (newest day first); undone before done within a day.
+  const groups = groupByCreated(tasks).map((g) => ({
+    ...g,
+    items: [...g.items].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1)),
+  }));
 
   async function add() {
     if (!title.trim()) { setAdding(false); return; }
@@ -274,18 +351,22 @@ function Tasks({ tasks, saveItem }) {
 
       {tasks.length === 0 && !adding && <p className="empty">Add a task, then open it to set a due date and subtasks.</p>}
 
-      {sections.map(({ name, alert, list }) => list.length > 0 && (
-        <section key={name} className="section">
-          <span className={'eyebrow' + (alert ? ' alert' : '')}>{name}</span>
+      {groups.map((g) => (
+        <section key={g.key} className="section">
+          <span className="eyebrow">{g.label}</span>
           <ul className="list" style={{ listStyle: 'none' }}>
-            {list.map((t) => (
+            {g.items.map((t) => (
               <TaskRow
                 key={t.id}
                 task={t}
                 today={today}
-                open={openId === t.id}
+                open={!selMode && openId === t.id}
                 onToggleOpen={() => setOpenId(openId === t.id ? null : t.id)}
                 saveItem={saveItem}
+                selMode={selMode}
+                selected={selIds.has(t.id)}
+                onToggleSel={() => toggleSel(t.id)}
+                onLong={() => enterSel(t.id)}
               />
             ))}
           </ul>
@@ -295,22 +376,23 @@ function Tasks({ tasks, saveItem }) {
   );
 }
 
-function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
+function TaskRow({ task: t, today, open, onToggleOpen, saveItem, selMode, selected, onToggleSel, onLong }) {
   const [newSub, setNewSub] = useState('');
   const [menu, setMenu] = useState(false);
   const subs = t.subtasks || [];
   const doneCount = subs.filter((s) => s.done).length;
   const late = !t.done && t.due && t.due < today;
+  const mainLp = useLongPress(onLong, () => (selMode ? onToggleSel() : onToggleOpen()));
 
   async function setSubtasks(subtasks) { await saveItem({ id: t.id, subtasks }); }
 
   return (
-    <li className={'card task' + (t.done ? ' done' : '') + (open ? ' open' : '')}>
+    <li className={'card task' + (t.done ? ' done' : '') + (open ? ' open' : '') + (selected ? ' selected' : '')}>
       <div className="task-row">
         <button
           className={'tick' + (t.done ? ' done' : '')}
           aria-label={t.done ? 'Mark not done' : 'Mark done'}
-          onClick={() => saveItem({ id: t.id, done: !t.done })}
+          onClick={() => (selMode ? onToggleSel() : saveItem({ id: t.id, done: !t.done }))}
         >{t.done ? '✓' : ''}</button>
         {/* One title only: a heading that becomes an inline editable field when
             the card is open — never a second copy of the title in a box. */}
@@ -323,7 +405,7 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
             onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) saveItem({ id: t.id, title: v }); }}
           />
         ) : (
-          <div className="task-main" onClick={onToggleOpen}>
+          <div className="task-main" {...mainLp}>
             <div className="task-title">{t.title || 'Untitled task'}</div>
             {(t.due || subs.length > 0) && (
               <div className="task-sub">
@@ -339,7 +421,9 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem }) {
             )}
           </div>
         )}
-        <span className="chev" onClick={onToggleOpen}>›</span>
+        {selMode
+          ? <span className="selcheck">{selected ? '✓' : ''}</span>
+          : <span className="chev" onClick={onToggleOpen}>›</span>}
       </div>
 
       {open && (

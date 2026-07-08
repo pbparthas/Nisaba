@@ -52,7 +52,9 @@ export function newItem(partial) {
     subtasks: [], // [{id, title, done}] — checklist under a task, syncs with it
     tags: [],
     attachments: [], // [{id, name, mime}] — binary lives in Drive attachments/
+    color: null, // per-note background palette key
     deleted: false,
+    created_at: Date.now(),
     updated_at: Date.now(),
     ...partial,
   };

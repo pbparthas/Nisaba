@@ -21,15 +21,18 @@ const WEIGHT_N = { regular: '400', medium: '500', semibold: '600' };
 export const NOTE_STYLE_OPTIONS = [['normal', 'Normal'], ['italic', 'Italic']];
 
 // Ink resolves through CSS ([data-note-ink]) so each has a legible paper + dark
-// value; only the key is stored.
+// value; only the key is stored. Distinct hues (Slate dropped — it read the
+// same as the near-black Default).
 export const NOTE_INK_OPTIONS = [
-  ['default', 'Default'], ['sepia', 'Sepia'], ['forest', 'Forest'], ['slate', 'Slate'],
+  ['default', 'Ink'], ['sepia', 'Sepia'], ['forest', 'Forest'],
+  ['wine', 'Wine'], ['navy', 'Navy'], ['plum', 'Plum'],
 ];
 
-// Per-note background palette (values in CSS, theme-aware).
+// Per-note background palette — clearer, distinct hues (values in CSS,
+// theme-aware). Preview colour is the paper tone.
 export const NOTE_COLORS = [
-  ['default', '#efe7d2'], ['sage', '#e3ead9'], ['sky', '#dbe5ec'],
-  ['sand', '#efe1c9'], ['blush', '#f0e1dd'], ['stone', '#e7e1d4'],
+  ['default', '#efe7d2'], ['rose', '#f0d3cf'], ['amber', '#f0dcb0'], ['sage', '#d3e2c2'],
+  ['teal', '#c3e0da'], ['sky', '#cbdcea'], ['lavender', '#ded9ec'], ['clay', '#ecd3ba'],
 ];
 
 const get = (k, d) => { try { return localStorage.getItem(KEYS[k]) || d; } catch { return d; } };
