@@ -1,0 +1,17 @@
+{
+  "name": "nisaba-service",
+  "version": "1.0.0",
+  "description": "Nisaba local desktop service — Joplin-style REST + MCP over one localhost port, backed by the same Drive sync engine as the app",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nisaba-service": "src/main.js"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,16 @@
+[package]
+name = "nisaba"
+version = "1.0.0"
+description = "Nisaba — notes & tasks synced through your own Google Drive"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+# by default Tauri runs in production mode; `cargo tauri dev` overrides this.
+custom-protocol = ["tauri/custom-protocol"]

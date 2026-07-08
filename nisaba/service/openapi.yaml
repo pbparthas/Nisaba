@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  title: Nisaba desktop service
+  version: 1.0.0
+  description: >
+    Local REST API for Nisaba notes & tasks, served on one localhost port by the
+    desktop service. Backed by the same Google-Drive sync engine as the app, so
+    everything here reads/writes the user's own Drive. All endpoints except
+    `GET /ping` require `Authorization: Bearer <token>` (the token is printed on
+    startup and stored in `~/.config/nisaba/service.json`). An MCP endpoint for
+    Claude Code lives at `POST /mcp` (JSON-RPC 2.0, streamable HTTP) and is not
+    described here.
+servers:
+  - url: http://localhost:27125
+security:
+  - bearerAuth: []
+paths:
+  /ping:
+    get:
+      summary: Discovery — is the service up, and is my token valid?
+      security: []
+      responses:
+        '200':
+          description: Service info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  app: { type: string, const: nisaba-service }
+                  version: { type: string }
+                  authenticated: { type: boolean, description: whether the request's bearer token matched }
+  /notes:
+    get:
+      summary: Search notes (title, body, tags); newest first
+      parameters:
+        - { name: query, in: query, schema: { type: string }, description: Text to match; empty returns recent notes }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200': { description: Matching notes, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/NoteSummary' } } } } }
+    post:
+      summary: Create a note
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                body: { description: string or BlockNote block array, oneOf: [ { type: string }, { type: array } ] }
+                tags: { type: array, items: { type: string } }
+      responses:
+        '201': { description: The created note, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+  /notes/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    get:
+      summary: Get a note with its full body
+      responses:
+        '200': { description: Note, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+        '404': { description: Not found }
+    patch:
+      summary: Update a note's title, body and/or tags (only fields sent change)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                body: { oneOf: [ { type: string }, { type: array } ] }
+                tags: { type: array, items: { type: string } }
+      responses:
+        '200': { description: Updated note, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+    delete:
+      summary: Delete (tombstone) a note
+      responses:
+        '200': { description: Deleted }
+  /tasks:
+    get:
+      summary: List tasks, optionally by state, sorted by due date
+      parameters:
+        - { name: state, in: query, schema: { type: string, enum: [all, open, done], default: all } }
+      responses:
+        '200': { description: Tasks, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Task' } } } } }
+    post:
+      summary: Create a task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                due: { type: string, description: 'YYYY-MM-DD', nullable: true }
+      responses:
+        '201': { description: The created task, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+  /tasks/query:
+    get:
+      summary: Agenda query — tasks by due date and state (the differentiator)
+      parameters:
+        - { name: due_before, in: query, schema: { type: string }, description: 'Only tasks due strictly before YYYY-MM-DD' }
+        - { name: due_after, in: query, schema: { type: string }, description: 'Only tasks due strictly after YYYY-MM-DD' }
+        - { name: state, in: query, schema: { type: string, enum: [all, open, done], default: open } }
+      responses:
+        '200': { description: Tasks, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Task' } } } } }
+  /tasks/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    get:
+      summary: Get a task
+      responses:
+        '200': { description: Task, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+  /tasks/{id}/complete:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    post:
+      summary: Mark a task done (or reopen with done=false)
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { done: { type: boolean, default: true } } } } }
+      responses:
+        '200': { description: Updated task, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+  /tasks/{id}/subtasks:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    post:
+      summary: Append a checklist subtask
+      requestBody:
+        content: { application/json: { schema: { type: object, required: [title], properties: { title: { type: string } } } } }
+      responses:
+        '201': { description: Updated task, content: { application/json: { schema: { $ref: '#/components/schemas/Task' } } } }
+  /items/{id}/attachments:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    post:
+      summary: Attach a base64 file to a note or task (syncs to Drive)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                name: { type: string }
+                mime: { type: string, default: application/octet-stream }
+                data: { type: string, description: base64-encoded file contents }
+      responses:
+        '201': { description: Attachment reference, content: { application/json: { schema: { $ref: '#/components/schemas/Attachment' } } } }
+  /items/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+    delete:
+      summary: Delete (tombstone) any item
+      responses:
+        '200': { description: Deleted }
+  /search:
+    get:
+      summary: Search notes and tasks together
+      parameters: [ { name: query, in: query, schema: { type: string } } ]
+      responses:
+        '200':
+          description: Notes and tasks matching
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes: { type: array, items: { $ref: '#/components/schemas/NoteSummary' } }
+                  tasks: { type: array, items: { $ref: '#/components/schemas/Task' } }
+  /sync:
+    post:
+      summary: Force a Drive sync now
+      responses:
+        '200': { description: '{ ok: true }' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    Attachment:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        mime: { type: string }
+        size: { type: integer }
+    NoteSummary:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        tags: { type: array, items: { type: string } }
+        preview: { type: string, description: first ~200 chars of plain text }
+        attachments: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
+        created_at: { type: integer }
+        updated_at: { type: integer }
+    Note:
+      allOf:
+        - $ref: '#/components/schemas/NoteSummary'
+        - type: object
+          properties:
+            body: { description: string or BlockNote block array }
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        done: { type: boolean }
+        due: { type: string, nullable: true, description: 'YYYY-MM-DD' }
+        subtasks:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              done: { type: boolean }
+        created_at: { type: integer }
+        updated_at: { type: integer }

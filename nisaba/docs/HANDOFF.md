@@ -96,22 +96,40 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
   surface conflict copies visibly, storage-usage indicator.
 - Owner asked for: proper polish per the cream theme.
 
-### Phase 4 — Linux desktop (Tauri) + API for Claude Code
-- Tauri v2 wrapping the same built app.
-- **Auth caveat:** Google blocks GIS in webviews. Create a second OAuth client
-  of type **Desktop app** in the owner's Google project and use the loopback
-  (127.0.0.1 + PKCE) flow from the Tauri shell; keep `src/lib/auth.js`'s
-  interface and add a desktop implementation behind it.
-- Local service on one localhost port (pick ~27125): Joplin-style REST nouns
-  (`GET /ping` for discovery, `/notes`, `/tasks`, `/search`, `/attachments`)
-  + **MCP endpoint at `/mcp`** (streamable HTTP, official
-  @modelcontextprotocol/sdk) so `claude mcp add --transport http` works —
-  the Obsidian Local REST API pattern. One bearer token shown in Settings.
-  Publish an OpenAPI spec in the repo (Trilium ETAPI lesson).
-- MCP tools: `search_notes, get_note, create_note, patch_note, list_tasks,
-  query_tasks(due_before, state), add_task, complete_task, add_subtask,
-  add_attachment`. Task queries are the differentiator.
-- Verify by actually connecting Claude Code to it.
+### Phase 4 — Linux desktop (Tauri) + API for Claude Code  ← SERVICE SHIPPED
+**The local service is built and tested** in `nisaba/service/` (16 vitest cases
+green against the app's mock Drive + a live boot smoke test). It runs standalone
+today — `cd nisaba/service && node src/main.js` — no Tauri needed to connect
+Claude Code. What it is:
+- Zero-dependency Node service on one localhost port (default **27125**).
+- **REST** (Joplin nouns): `/ping` (unauth discovery), `/notes`, `/notes/:id`,
+  `/tasks`, `/tasks/query`, `/tasks/:id/complete`, `/tasks/:id/subtasks`,
+  `/items/:id/attachments`, `/search`, `/sync`. OpenAPI at
+  `service/openapi.yaml`.
+- **MCP** at `POST /mcp` (JSON-RPC 2.0, streamable HTTP) — implemented
+  dependency-free rather than via the SDK (matches the Worker; smaller supply
+  chain). 11 tools incl. `query_tasks(due_before, due_after, state)` — the
+  differentiator. Connect with `claude mcp add nisaba --transport http
+  http://localhost:27125/mcp --header "Authorization: Bearer <token>"`.
+- **One bearer token** guards everything but `/ping`; auto-generated on first
+  run into `~/.config/nisaba/service.json` and printed on startup.
+- **Reuses the exact app engine** (`app/src/lib/{merge,sync,drive,notebody}.js`)
+  via a new file-backed store (`service/src/store-file.js`) — durable plain-JSON
+  local replica, same as Drive.
+- **Auth reuses the deployed Worker** (owner's choice) instead of a 2nd OAuth
+  client: browser-loopback + PKCE → Worker `/exchange` (extended to accept a
+  `redirect_uri`/`code_verifier`; **owner must `wrangler deploy` the worker
+  again** and add `http://localhost:27125/oauth/callback` as an Authorized
+  redirect URI on the existing Web OAuth client). Refresh token stays in
+  Cloudflare KV; only a session cookie sits on disk.
+
+**Remaining for Phase 4 (on the owner's Linux box — can't compile Tauri in the
+cloud sandbox):** `nisaba/desktop/` has a Tauri v2 scaffold that wraps the built
+web app and spawns the service. To finish: `cargo`/Tauri prereqs, `npm run
+icons`, `npm run build`; package the service as a Tauri sidecar (Node SEA or
+`bun build --compile`) so end users don't need Node; verify the live
+`claude mcp add` connect. See `service/README.md` and `desktop/README.md`.
+- **Setup guide + steps:** `nisaba/service/README.md`.
 
 ### Phase 5 — Enki adapter
 - Enki is the owner's own tool; its protocol is STILL UNKNOWN. Ask the owner

@@ -32,6 +32,14 @@ function corsHeaders(origin, allowed) {
 const json = (obj, status, headers) =>
   new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 
+// The PWA uses the popup 'postmessage' flow; the desktop service uses a
+// loopback redirect. Allow only those shapes so /exchange can't be pointed at
+// an attacker-controlled redirect.
+function isAllowedRedirect(uri) {
+  if (uri === 'postmessage') return true;
+  return /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}\/oauth\/callback$/.test(uri || '');
+}
+
 function getCookie(req, name) {
   const raw = req.headers.get('Cookie') || '';
   const m = raw.match(new RegExp('(?:^|; )' + name + '=([^;]+)'));
@@ -69,10 +77,13 @@ export default {
 
     try {
       if (url.pathname === '/exchange' && req.method === 'POST') {
-        const { code } = await req.json().catch(() => ({}));
+        const { code, redirect_uri, code_verifier } = await req.json().catch(() => ({}));
         if (!code) return json({ error: 'missing_code' }, 400, ch);
+        const redirect = redirect_uri || 'postmessage';
+        if (!isAllowedRedirect(redirect)) return json({ error: 'bad_redirect' }, 400, ch);
         const { ok, data } = await googleToken(env, {
-          code, redirect_uri: 'postmessage', grant_type: 'authorization_code',
+          code, redirect_uri: redirect, grant_type: 'authorization_code',
+          ...(code_verifier ? { code_verifier } : {}),
         });
         if (!ok) return json({ error: 'exchange_failed', detail: data }, 400, ch);
 

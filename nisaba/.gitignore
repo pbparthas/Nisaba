@@ -2,3 +2,7 @@ node_modules/
 data/
 *.log
 dist/
+
+# Tauri (Rust) build output
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

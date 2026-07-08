@@ -1,0 +1,15 @@
+{
+  "name": "nisaba-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Nisaba Linux desktop shell (Tauri v2) — wraps the web app and runs the local REST/MCP service",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon ../app/public/pwa-512.png"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
