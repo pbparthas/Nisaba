@@ -1,22 +1,35 @@
 // Nisaba desktop shell (Tauri v2).
 //
-// It shows the same web app in a native window and hands it what it needs to
-// talk to the local service: it reads the service's bearer token from
-// ~/.config/nisaba/service.json and injects
-//   window.__NISABA_SERVICE__ = { base, token }
-// as an initialization script — which runs before the page's own scripts, so
-// the app's auth layer (lib/auth.js) picks it up and pulls Drive tokens from the
-// service instead of Google's blocked-in-webview sign-in.
+// Shows the web app in a native window and gives it the local service's bearer
+// token via an init script (window.__NISABA_SERVICE__), so the app's auth layer
+// pulls Drive tokens from the service instead of Google's blocked-in-webview
+// sign-in.
 //
-// The service itself is expected to be running already (the systemd user unit
-// installs it: nisaba/service/systemd/install.sh). This shell connects to it; it
-// does not spawn its own copy, so it never collides with the systemd instance.
+// Service lifecycle:
+//   - If a service is already answering on the port (e.g. the systemd user
+//     unit), we just connect to it — we never spawn a second one.
+//   - Otherwise, in a *bundled* build, we launch the sidecar binary shipped
+//     next to this executable (see `build:bundled`), so the .deb/.AppImage is
+//     self-contained (no separate Node needed). We wait briefly for it to write
+//     its token file, then read the token for injection.
 
 #![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
 
 use std::fs;
+use std::net::TcpStream;
 use std::path::PathBuf;
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use std::process::{Child, Command};
+use std::sync::Mutex;
+use std::time::Duration;
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+
+const PORT_DEFAULT: u16 = 27125;
+
+struct Sidecar(Mutex<Option<Child>>);
+
+fn port() -> u16 {
+    std::env::var("NISABA_PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(PORT_DEFAULT)
+}
 
 fn config_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("NISABA_CONFIG_DIR") {
@@ -40,15 +53,65 @@ fn js_string(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
+fn service_answering(p: u16) -> bool {
+    TcpStream::connect_timeout(&(([127, 0, 0, 1], p).into()), Duration::from_millis(300)).is_ok()
+}
+
+// Locate the bundled sidecar next to this executable. Tauri places externalBin
+// binaries alongside the main binary (with or without the target-triple suffix
+// depending on version), so try the plain name first, then any sibling that
+// starts with it.
+fn find_sidecar() -> Option<PathBuf> {
+    let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    let plain = dir.join("nisaba-service");
+    if plain.exists() {
+        return Some(plain);
+    }
+    for entry in fs::read_dir(&dir).ok()?.flatten() {
+        let name = entry.file_name();
+        if name.to_string_lossy().starts_with("nisaba-service") {
+            return Some(entry.path());
+        }
+    }
+    None
+}
+
+// Start the bundled service if nothing is already serving the port. Returns the
+// child so we can stop it on exit. In a non-bundled build (no sidecar present)
+// this is a no-op and the app connects to whatever external service is running.
+fn ensure_service(p: u16) -> Option<Child> {
+    if service_answering(p) {
+        return None; // systemd or another instance already up — connect to it
+    }
+    let bin = find_sidecar()?;
+    match Command::new(&bin).spawn() {
+        Ok(child) => {
+            // The service writes its token file at startup (before it listens),
+            // so wait briefly for it so we can inject the token on first launch.
+            let token_file = config_dir().join("service.json");
+            for _ in 0..50 {
+                if token_file.exists() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            Some(child)
+        }
+        Err(e) => {
+            eprintln!("could not start bundled service ({}): {e}", bin.display());
+            None
+        }
+    }
+}
+
 fn main() {
-    let port: u16 = std::env::var("NISABA_PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(27125);
-    let base = format!("http://localhost:{port}");
+    let p = port();
+    let child = ensure_service(p);
+
+    let base = format!("http://localhost:{p}");
     let token = read_service_token().unwrap_or_default();
     if token.is_empty() {
-        eprintln!(
-            "Warning: no service token found in {}. Start the service once (systemd or `node src/main.js`) so it generates one.",
-            config_dir().join("service.json").display()
-        );
+        eprintln!("Warning: no service token yet; the window will show sign-in until the service is connected.");
     }
     let init = format!(
         "window.__NISABA_SERVICE__ = {{ base: \"{}\", token: \"{}\" }};",
@@ -57,6 +120,7 @@ fn main() {
     );
 
     tauri::Builder::default()
+        .manage(Sidecar(Mutex::new(child)))
         .setup(move |app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Nisaba")
@@ -65,6 +129,18 @@ fn main() {
                 .initialization_script(&init)
                 .build()?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Stop the bundled service (if we started it) when the app closes.
+            if let tauri::WindowEvent::Destroyed = event {
+                if let Some(state) = window.try_state::<Sidecar>() {
+                    if let Ok(mut guard) = state.0.lock() {
+                        if let Some(mut c) = guard.take() {
+                            let _ = c.kill();
+                        }
+                    }
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running Nisaba");

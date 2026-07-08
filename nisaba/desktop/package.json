@@ -7,6 +7,8 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
+    "sidecar": "bash scripts/build-sidecar.sh",
+    "build:bundled": "bash scripts/build-sidecar.sh && tauri build --config src-tauri/tauri.bundle.conf.json",
     "icons": "tauri icon ../app/public/pwa-512.png"
   },
   "devDependencies": {

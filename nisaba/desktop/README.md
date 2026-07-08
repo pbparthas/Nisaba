@@ -58,14 +58,30 @@ Note: the window runs its own in-browser sync engine, and the service also
 syncs — that's two replicas sharing one Drive, exactly like two devices, which
 the conflict-copy engine already handles.
 
-## Rough edges to finish on-device
+## Self-contained build (bundled service)
 
-- **Bundling the service** so end users don't need Node: currently the service
-  runs separately (systemd/manual). To make the `.deb`/`.AppImage`
-  self-contained, compile the service to a single binary (Node SEA or
-  `bun build --compile`), add it under `tauri.conf.json > bundle > externalBin`,
-  and launch it via the shell plugin *only if* `localhost:27125` isn't already
-  answering (so it won't fight the systemd unit).
+`npm run dev` / `npm run build` produce an app that **connects to a service you
+run separately** (systemd/manual) — good for the owner's setup.
+
+To ship a **self-contained** `.deb`/`.AppImage` that needs no separate Node or
+service (for distributing to others), bundle the service as a sidecar:
+
+```bash
+# one-time: install Bun (compiles the service to a single binary)
+curl -fsSL https://bun.sh/install | bash
+cd nisaba/desktop
+npm run build:bundled      # compiles the sidecar, then builds with it bundled
+```
+
+`build:bundled` runs `scripts/build-sidecar.sh` (Bun compiles
+`../service/src/main.js` → `src-tauri/binaries/nisaba-service-<triple>`) then
+`tauri build --config src-tauri/tauri.bundle.conf.json`, which adds the sidecar
+via `externalBin`. At runtime the shell (`main.rs`) starts the bundled service
+**only if** nothing is already answering on the port — so on a machine that
+already runs the systemd unit, it just connects; on a fresh machine it launches
+the bundled copy, which does its own first-run Google sign-in in the browser.
+
+## Rough edges to finish on-device
 - **Service worker**: the app registers a PWA service worker; inside Tauri that
   registration may no-op or log — harmless, but can be disabled for the desktop
   build if noisy.

@@ -6,3 +6,5 @@ dist/
 # Tauri (Rust) build output
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
+# Compiled service sidecar (produced by build:bundled)
+desktop/src-tauri/binaries/
