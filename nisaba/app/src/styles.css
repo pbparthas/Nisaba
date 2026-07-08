@@ -519,7 +519,7 @@ input, textarea, button { font-family: inherit; }
 }
 
 /* per-note colour swatch picker (in the editor) */
-.swatches { display: flex; gap: 10px; align-items: center; padding: 4px 0; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 4px 0; }
 .swatch {
   width: 26px; height: 26px; border-radius: 50%; cursor: pointer; flex: none;
   border: 1.5px solid var(--line); padding: 0;
