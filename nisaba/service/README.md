@@ -74,6 +74,18 @@ curl -H "Authorization: Bearer $TOKEN" "http://localhost:27125/tasks/query?due_b
 node src/main.js sign-out      # revokes the Worker session and clears the local cookie
 ```
 
+### Always-on (optional, laptop)
+To have it running whenever you use Claude Code on this machine, install it as a
+systemd **user** service (starts on login, restarts on crash). Sign in once
+interactively first (so the session exists), then:
+```bash
+bash systemd/install.sh          # install + enable + start
+bash systemd/install.sh remove   # undo
+```
+The API stays on localhost — it is only reachable from this laptop, not your
+phone. Making it reachable from mobile Claude means putting it behind a network
+(Tailscale/VPN) or deploying it to a server — a separate security decision.
+
 ## Configuration (env vars)
 
 | var | default | meaning |
