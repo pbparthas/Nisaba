@@ -209,6 +209,9 @@ export default function App() {
     auth.signOut();
     setSignedIn(false);
     setStatus('local only');
+    // Return to the sign-in screen so sign-in and sign-out are symmetric.
+    localStorage.removeItem('ns_skip_signin');
+    setShowSignIn(true);
   }
 
   if (!clientId) return <SetupScreen onSave={(id) => { localStorage.setItem('ns_client_id', id); setClientId(id); }} />;

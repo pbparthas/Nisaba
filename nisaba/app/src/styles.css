@@ -108,13 +108,14 @@ input, textarea, button { font-family: inherit; }
    letters up — so the wordmark is nudged DOWN to sit its x-height band on the
    mark's optical centre. Below the header the mark alone carries the identity
    (favicon / app icon), so small pixels never rely on the script. */
-.brand .word {
-  font-family: "Great Vibes", cursive; font-weight: 400;
-  font-size: 34px; line-height: 1;
+/* Font on .word so every lockup (header, sign-in, setup) uses the script —
+   it was scoped to .brand before, so the sign-in wordmark fell back to sans. */
+.word {
+  font-family: "Great Vibes", cursive; font-weight: 400; line-height: 1;
   -webkit-text-stroke: 0.5px currentColor;
-  transform: translateY(5px);
 }
-.brand .word.big { font-size: 54px; transform: translateY(8px); }
+.brand .word { font-size: 34px; transform: translateY(5px); }
+.word.big { font-size: 54px; transform: translateY(8px); }
 .logo { display: block; flex: none; }
 .hdr .spacer { flex: 1; }
 .status {
