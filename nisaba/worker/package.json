@@ -1,0 +1,13 @@
+{
+  "name": "nisaba-auth",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Nisaba auth broker — Cloudflare Worker that keeps the Google session alive",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  }
+}

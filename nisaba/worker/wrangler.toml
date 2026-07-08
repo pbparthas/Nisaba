@@ -1,0 +1,23 @@
+name = "nisaba-auth"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Public client id (baked into the app too). The SECRET is set separately with
+# `wrangler secret put GOOGLE_CLIENT_SECRET` — never put it in this file.
+[vars]
+GOOGLE_CLIENT_ID = "652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com"
+ALLOWED_ORIGINS = "https://nisaba.orionforge.dev,http://localhost:5173"
+COOKIE_DOMAIN = "orionforge.dev"
+
+# Session store (refresh tokens). Create it with:
+#   wrangler kv namespace create SESSIONS
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Serve it at auth.orionforge.dev. Easiest is to add a Custom Domain in the
+# Cloudflare dashboard (Workers & Pages → nisaba-auth → Settings → Domains &
+# Routes → Add → auth.orionforge.dev), which also creates the DNS record.
+# Alternatively uncomment a route:
+# routes = [{ pattern = "auth.orionforge.dev", custom_domain = true }]
