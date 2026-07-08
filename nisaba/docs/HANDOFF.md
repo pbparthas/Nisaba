@@ -17,25 +17,61 @@ often drive sessions from it, so keep instructions and UI phone-first.
 - Verify before pushing: unit tests + a real-browser check. Report results
   honestly.
 
-## Current state (everything below is DONE and deployed)
+## Current state (Phases 1–4 + the redesign are DONE, deployed, and verified)
 
-- **Branch:** `claude/cross-platform-sync-app-wsoso4` in
-  https://github.com/pbparthas/Nisaba (repo was renamed from `adhoc-projects`;
-  session tooling may still know it by the old name — the GitHub MCP tools
-  only accept `repo: adhoc-projects`, git remote redirects fine).
-- **Live app:** https://pbparthas.github.io/Nisaba/ — deployed by
-  `.github/workflows/deploy-pages.yml` on every push of `nisaba/**` to the
-  branch above (builds with `NISABA_BASE=/Nisaba/`, runs tests first).
-- **What works end-to-end on the owner's real phone + Google Drive:**
-  sign-in (GIS token flow), notes with image attachments, tasks with due dates
-  and **subtasks** (embedded checklist per task), per-item Drive sync with
-  conflict copies, offline-capable local replica in IndexedDB.
-- **Owner's OAuth Client ID** (public, baked into `app/src/App.jsx` as
-  `DEFAULT_CLIENT_ID`):
-  `652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com`
-  Authorized origins: `https://pbparthas.github.io`, `http://localhost:5173`.
-- **Consent screen: In production** (confirmed by the owner 2026-07-08) — so
-  sign-in no longer dies every 7 days. `drive.file` needs no verification.
+Updated 2026-07-08 (end of the desktop/service session). Phases 1–4 and the
+full visual redesign are complete and running on the owner's real devices; only
+Phase 5 (Enki) remains, blocked on its unknown protocol.
+
+- **Dev branch (this work):** `claude/handoff-doc-review-1enmyx` in
+  https://github.com/pbparthas/Nisaba. **Deploy branch:**
+  `claude/cross-platform-sync-app-wsoso4` — but Pages deploys are triggered by
+  `workflow_dispatch` from the dev branch (the `github-pages` environment was
+  opened to it). GitHub MCP tools use `repo: nisaba` (lowercase); git remote
+  redirects fine.
+- **Live app:** https://nisaba.orionforge.dev — custom domain (Cloudflare DNS →
+  GitHub Pages), served at root (`base: '/'`, `CNAME` in `app/public/`). Deployed
+  by `.github/workflows/deploy-pages.yml`; re-run it via workflow_dispatch after
+  pushing `nisaba/**`.
+- **Persistent login:** the Cloudflare Worker in `nisaba/worker/` (live at
+  `auth.orionforge.dev`) holds the refresh token in KV and mints access tokens,
+  so no hourly re-auth. `app/src/lib/auth.js` defaults to this backend
+  (`AUTH_WORKER_DEFAULT = 'https://auth.orionforge.dev'`).
+- **What works end-to-end on the owner's phone + laptop + Google Drive:**
+  first-run sign-in screen, notes (BlockNote editor, image attachments,
+  per-note background colour), tasks with due dates + **subtasks**, agenda view,
+  search, multi-select delete, date grouping, per-item Drive sync with conflict
+  copies, offline PWA (installable), light/dark, chosen note typography.
+- **Desktop:** the Tauri Linux app (`nisaba/desktop/`) is compiled, installed as
+  a `.deb`, pinned to the dash, and syncing. It loads the **bundled** UI
+  (`tauri://localhost`) and auths through the local service (token bridge) — it
+  must load the bundled origin, not the https site, or the webview blocks the
+  http://localhost service as mixed content. UI changes need a rebuild
+  (`npm run build` + `dpkg -i`); auto-update would need the Tauri updater.
+- **Claude Code integration verified:** `claude mcp add nisaba …` connected and
+  returned the owner's real tasks; the service runs always-on via the systemd
+  user unit (`nisaba/service/systemd/install.sh`).
+- **Owner's OAuth Client ID** (public, in `app/src/App.jsx` `DEFAULT_CLIENT_ID`
+  and `worker/wrangler.toml`):
+  `652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com`.
+  Authorized JS origins include `https://nisaba.orionforge.dev`,
+  `http://localhost:5173`; Authorized redirect URI
+  `http://localhost:27125/oauth/callback` (desktop loopback).
+- **Consent screen: In production** (confirmed 2026-07-08). `drive.file` needs
+  no verification.
+
+### Known deferrals (not bugs — intentionally out of scope for now)
+- **Phase 5 / Enki** — needs its protocol from the owner before anything.
+- **In-note checkbox blocks → task agenda** (plan decision #3): only top-level
+  `type:'task'` items appear in the agenda / `query_tasks`; checklist blocks
+  typed inside a note are not surfaced as agenda tasks.
+- **Task recurrence** — v1 is due-dates-only by plan; repeaters are later.
+- **Mobile Claude → service** — Tailscale/`NISABA_HOST=0.0.0.0` is wired, but
+  only helps if the MCP client runs *on-device*; cloud-run Claude Code needs the
+  service on a public host or the cloud env joined to the tailnet.
+- **Optional polish** — relabel the desktop "Continue with Google" → "Connect";
+  smoother fresh-machine first-run; the untested self-contained `build:bundled`;
+  the 16px favicon cleanup.
 
 ## Architecture (see docs/PLAN.md for the approved plan, RESEARCH.md for why)
 
@@ -67,7 +103,7 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
 
 ## Remaining phases (approved plan — do them in order)
 
-### Phase 2 — Editor gate (BlockNote on the real phone) ← NEXT
+### Phase 2 — Editor gate (BlockNote on the real phone) ✅ DONE
 1. `npm i @blocknote/core @blocknote/react @blocknote/mantine` (MPL-2.0 core
    only — do NOT add any `@blocknote/xl-*` package: GPL/paid).
 2. Replace the note editor's `<textarea>` with BlockNote. Note `body` becomes
@@ -87,7 +123,7 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
    **Fallback (pre-agreed):** raw Tiptap v3 + copied Apache-2.0 slash-menu /
    bubble-menu components from https://github.com/steven-tey/novel.
 
-### Phase 3 — Full PWA
+### Phase 3 — Full PWA ✅ DONE
 - Service worker: app-shell caching, **network-first with cache fallback**
   (a cache-first SW served stale code in the prior session — don't repeat).
   vite-plugin-pwa is fine. Keep the sync engine in the page, NOT in the SW
@@ -96,11 +132,12 @@ Commands: `cd nisaba/app && npm install && npm test` (vitest),
   surface conflict copies visibly, storage-usage indicator.
 - Owner asked for: proper polish per the cream theme.
 
-### Phase 4 — Linux desktop (Tauri) + API for Claude Code  ← SERVICE SHIPPED
-**The local service is built and tested** in `nisaba/service/` (16 vitest cases
-green against the app's mock Drive + a live boot smoke test). It runs standalone
-today — `cd nisaba/service && node src/main.js` — no Tauri needed to connect
-Claude Code. What it is:
+### Phase 4 — Linux desktop (Tauri) + API for Claude Code ✅ DONE
+Both the service and the desktop app are built, deployed, and verified on the
+owner's laptop (service via systemd, `.deb` installed and syncing, live
+`claude mcp add` returned real tasks). **The local service** in `nisaba/service/`
+has 17 vitest cases green (REST + MCP + two-device Drive round-trip + `/token`)
+and runs standalone (`node src/main.js`) or as the systemd unit. What it is:
 - Zero-dependency Node service on one localhost port (default **27125**).
 - **REST** (Joplin nouns): `/ping` (unauth discovery), `/notes`, `/notes/:id`,
   `/tasks`, `/tasks/query`, `/tasks/:id/complete`, `/tasks/:id/subtasks`,
@@ -123,35 +160,44 @@ Claude Code. What it is:
   redirect URI on the existing Web OAuth client). Refresh token stays in
   Cloudflare KV; only a session cookie sits on disk.
 
-**Linux desktop app (`nisaba/desktop/`, Tauri v2) — BUILT, pending on-device
-compile.** The window shows the same web UI and authenticates **through the
-service**: Google blocks its sign-in JS in webviews, so the shell
-(`src-tauri/src/main.rs`) reads the service bearer token from
+**Linux desktop app (`nisaba/desktop/`, Tauri v2) — COMPILED, INSTALLED,
+WORKING.** The window shows the same web UI (bundled, `tauri://localhost`) and
+authenticates **through the service**: Google blocks its sign-in JS in webviews,
+so the shell (`src-tauri/src/main.rs`) reads the service bearer token from
 `~/.config/nisaba/service.json` and injects
-`window.__NISABA_SERVICE__ = { base, token }` before the page loads; the app's
-`lib/auth.js` gained a "service mode" that calls the service's new
-`GET /token` for Drive access tokens (no GIS in the webview). The window runs
-its own in-browser sync engine (two replicas sharing one Drive, like two
-devices — the conflict engine handles it). The shell **connects** to the
-already-running (systemd) service; it does not spawn its own, avoiding the
-port collision. Can't be compiled in the cloud sandbox (no display / no
-webkit2gtk); the token-parser + `/token` + service-auth mode are unit-tested,
-the GUI needs `cargo`/Tauri build on the Linux box. Remaining polish: bundle
-the service as a Tauri sidecar (Node SEA / `bun build --compile`) so end users
-don't need Node. Steps in `desktop/README.md`.
+`window.__NISABA_SERVICE__ = { base, token }` before the page loads; `lib/auth.js`
+has a "service mode" that calls the service's `GET /token` for Drive tokens (no
+GIS in the webview). The window runs its own in-browser sync engine (two
+replicas sharing one Drive, like two devices). The shell **connects** to the
+running systemd service (only spawns a bundled sidecar if the port is free, so
+no collision).
+- **IMPORTANT — don't load the live https site in the window.** It was tried
+  (auto-updating UI) and reverted: WebKitGTK blocks an https page from fetching
+  the `http://localhost` service as mixed content, breaking auth. The bundled
+  `tauri://` origin can reach it. So UI changes require a rebuild (`npm run
+  build` + `dpkg -i`); auto-update must go through the Tauri updater, which
+  keeps the local origin.
+- **Self-contained `.deb`** (opt-in, untested): `npm run build:bundled` compiles
+  the service to a Bun binary and ships it as an `externalBin` sidecar. Plain
+  `dev`/`build` connect to the systemd service instead.
 - **Setup guide + steps:** `nisaba/service/README.md` and `desktop/README.md`.
 
-### Phase 5 — Enki adapter
+### Phase 5 — Enki adapter ⛔ NOT STARTED (blocked)
 - Enki is the owner's own tool; its protocol is STILL UNKNOWN. Ask the owner
   how Enki communicates before designing anything. It consumes the phase-4
-  REST/MCP surface.
+  REST/MCP surface (already published: `service/openapi.yaml` + the MCP tools).
+  This is the only remaining phase.
 
-## DESIGN BRIEF — full visual redesign required (owner's explicit request)
+## DESIGN BRIEF — full visual redesign ✅ DONE (owner approved)
 
-Two UI passes shipped (dark spike, then a cream theme with orange accent,
-logo mark, task sections, inline editing). The owner reviewed v2 on their
-Android phone and rejected it: **"very shoddy"**. This redesign is the
-top-priority task alongside phase 2, and the owner expects it done properly.
+The redesign was completed and approved. Orange dropped for **Reed Green**
+(`#2f6b43` paper / `#46b47e` dark, paper default); star-rosette / "star of
+Inanna" logo mark + **Great Vibes** script wordmark (size-aware); the web-form
+look removed (edit-in-place, chips, no ALL-CAPS captions); self-hosted
+typography with a user-chosen note font/size/weight/style/ink (all via compact
+dropdowns) and per-note background colours (14, via a Colour pill); common
+Settings page; light/dark; multi-select delete; date grouping. The original
+brief below is kept for context/history.
 
 ### The owner's verdict on v2, verbatim themes
 
