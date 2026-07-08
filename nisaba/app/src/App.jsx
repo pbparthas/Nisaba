@@ -29,6 +29,29 @@ function useLongPress(onLong, onClick) {
   };
 }
 
+// Free-text match across title, body, tags and subtasks.
+function matchItem(item, q) {
+  const s = q.trim().toLowerCase();
+  if (!s) return true;
+  if ((item.title || '').toLowerCase().includes(s)) return true;
+  if (blocksToText(item.body).toLowerCase().includes(s)) return true;
+  if ((item.tags || []).some((t) => t.toLowerCase().includes(s))) return true;
+  if ((item.subtasks || []).some((st) => (st.title || '').toLowerCase().includes(s))) return true;
+  return false;
+}
+
+function SearchBar({ value, onChange, placeholder }) {
+  return (
+    <div className="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" />
+      </svg>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} />
+      {value && <button className="search-x" aria-label="Clear search" onClick={() => onChange('')}>✕</button>}
+    </div>
+  );
+}
+
 const createdAt = (i) => i.created_at || i.updated_at;
 const startOfDay = (ts) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
 function dayHeading(ts) {
@@ -102,6 +125,7 @@ export default function App() {
   const [mode, setMode] = useState(getMode);
   const [selMode, setSelMode] = useState(false);
   const [selIds, setSelIds] = useState(() => new Set());
+  const [query, setQuery] = useState('');
 
   const clearSel = useCallback(() => { setSelMode(false); setSelIds(new Set()); }, []);
   const enterSel = (id) => { setSelMode(true); setSelIds(new Set([id])); };
@@ -110,7 +134,7 @@ export default function App() {
     if (n.size === 0) setSelMode(false);
     return n;
   });
-  const goTab = (t) => { clearSel(); setTab(t); };
+  const goTab = (t) => { clearSel(); setQuery(''); setTab(t); };
   async function deleteSel() {
     for (const id of selIds) await saveItem({ id, deleted: true });
     clearSel();
@@ -206,7 +230,8 @@ export default function App() {
 
       {tab === 'notes' && (
         <main className="screen">
-          {groupByCreated(notes).map((g) => (
+          {(notes.length > 0 || query) && <SearchBar value={query} onChange={setQuery} placeholder="Search notes" />}
+          {groupByCreated(notes.filter((n) => matchItem(n, query))).map((g) => (
             <section key={g.key} className="section">
               <span className="eyebrow">{g.label}</span>
               <ul className="list" style={{ listStyle: 'none' }}>
@@ -220,11 +245,12 @@ export default function App() {
             </section>
           ))}
           {notes.length === 0 && <p className="empty">Capture your first note with the ＋ button.</p>}
+          {notes.length > 0 && query && notes.filter((n) => matchItem(n, query)).length === 0 && <p className="empty">No notes match “{query}”.</p>}
           {!selMode && <button className="fab" aria-label="New note" onClick={async () => { const n = await saveItem({ type: 'note' }); setEditing({ ...n, _new: true }); }}>＋</button>}
         </main>
       )}
 
-      {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} selMode={selMode} selIds={selIds} toggleSel={toggleSel} enterSel={enterSel} />}
+      {tab === 'tasks' && <Tasks tasks={tasks} saveItem={saveItem} selMode={selMode} selIds={selIds} toggleSel={toggleSel} enterSel={enterSel} query={query} setQuery={setQuery} />}
 
       {tab === 'settings' && (
         <Settings
@@ -312,17 +338,31 @@ function dueLabel(due, today) {
   return new Date(due).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-function Tasks({ tasks, saveItem, selMode, selIds, toggleSel, enterSel }) {
+function Tasks({ tasks, saveItem, selMode, selIds, toggleSel, enterSel, query, setQuery }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [openId, setOpenId] = useState(null);
+  const [grouping, setGrouping] = useState(() => { try { return localStorage.getItem('ns:taskGroup') || 'created'; } catch { return 'created'; } });
   const today = new Date().toISOString().slice(0, 10);
+  const setGroupMode = (g) => { try { localStorage.setItem('ns:taskGroup', g); } catch { /* private */ } setGrouping(g); };
 
-  // Grouped by date created (newest day first); undone before done within a day.
-  const groups = groupByCreated(tasks).map((g) => ({
-    ...g,
-    items: [...g.items].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1)),
-  }));
+  const shown = tasks.filter((t) => matchItem(t, query));
+
+  // Two ways to group: by date created, or the due-date agenda.
+  let groups;
+  if (grouping === 'due') {
+    const byDue = (a, b) => String(a.due || '~').localeCompare(String(b.due || '~')) || createdAt(b) - createdAt(a);
+    groups = [
+      { key: 'overdue', label: 'Overdue', alert: true, items: shown.filter((t) => !t.done && t.due && t.due < today).sort(byDue) },
+      { key: 'today', label: 'Today', items: shown.filter((t) => !t.done && t.due === today).sort(byDue) },
+      { key: 'upcoming', label: 'Upcoming', items: shown.filter((t) => !t.done && (!t.due || t.due > today)).sort(byDue) },
+      { key: 'done', label: 'Done', items: shown.filter((t) => t.done).sort((a, b) => b.updated_at - a.updated_at) },
+    ].filter((g) => g.items.length > 0);
+  } else {
+    groups = groupByCreated(shown).map((g) => ({
+      ...g, items: [...g.items].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1)),
+    }));
+  }
 
   async function add() {
     if (!title.trim()) { setAdding(false); return; }
@@ -332,6 +372,13 @@ function Tasks({ tasks, saveItem, selMode, selIds, toggleSel, enterSel }) {
 
   return (
     <main className="screen">
+      {(tasks.length > 0 || query) && <SearchBar value={query} onChange={setQuery} placeholder="Search tasks" />}
+      {tasks.length > 0 && (
+        <div className="group-toggle">
+          <button className={grouping === 'created' ? 'on' : ''} onClick={() => setGroupMode('created')}>By date</button>
+          <button className={grouping === 'due' ? 'on' : ''} onClick={() => setGroupMode('due')}>By due</button>
+        </div>
+      )}
       {adding ? (
         <div className="add-composer">
           <span className="dot" />
@@ -351,9 +398,11 @@ function Tasks({ tasks, saveItem, selMode, selIds, toggleSel, enterSel }) {
 
       {tasks.length === 0 && !adding && <p className="empty">Add a task, then open it to set a due date and subtasks.</p>}
 
+      {tasks.length > 0 && query && shown.length === 0 && <p className="empty">No tasks match “{query}”.</p>}
+
       {groups.map((g) => (
         <section key={g.key} className="section">
-          <span className="eyebrow">{g.label}</span>
+          <span className={'eyebrow' + (g.alert ? ' alert' : '')}>{g.label}</span>
           <ul className="list" style={{ listStyle: 'none' }}>
             {g.items.map((t) => (
               <TaskRow
