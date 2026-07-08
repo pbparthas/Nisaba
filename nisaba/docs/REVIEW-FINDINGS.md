@@ -1,5 +1,27 @@
 # Code & security review — findings for Opus to action
 
+> **Resolution (actioned 2026-07-08).** All findings addressed. App 20/20 and
+> service 17/17 still green.
+> - **M1** — Worker rejects POSTs whose `Origin` is present but not allowlisted
+>   (403); no-Origin non-browser requests (desktop service) still pass.
+> - **M2** — corrected `NISABA_HOST` guidance everywhere (comment, `install.sh`,
+>   README): bind the tailnet IP for a dedicated host, or `0.0.0.0` **only**
+>   behind a `tailscale0` firewall rule; never blanket `0.0.0.0`.
+> - **L1** — token printed only when freshly generated (or `NISABA_DEBUG`).
+> - **L2** — Worker error responses drop `detail` (logged server-side). Desktop
+>   `auth-worker.js` detail kept: user's own machine, no secret, aids debugging.
+> - **L3** — `corsHeaders` omits `Access-Control-Allow-Origin` on mismatch.
+> - **L4** — `find_sidecar` matches exact names (via `build.rs` `TARGET`), no
+>   prefix scan.
+> - **L5** — `/exchange` always mints a fresh session id (carries the refresh
+>   token forward, deletes the old session).
+> - **L6** — `js_string` escapes `\n \r U+2028 U+2029` too.
+> - **Doc nits** — HANDOFF architecture block refreshed.
+>
+> The Worker change needs `npx wrangler deploy` (owner) to go live.
+
+---
+
 Reviewed branch `claude/handoff-doc-review-1enmyx` (Phases 1–4 + redesign).
 Independent review of the app PWA and the new backend (Cloudflare auth Worker,
 local REST/MCP service, Tauri desktop shell). Verdict: **solid, no critical or

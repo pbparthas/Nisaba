@@ -38,8 +38,9 @@ ExecStart=$NODE_BIN $SERVICE_DIR/src/main.js
 Restart=on-failure
 RestartSec=5
 Environment=NISABA_PORT=27125
-# Bind host: localhost by default. Set NISABA_HOST=0.0.0.0 before running this
-# script to also serve over the Tailscale interface (mobile reach).
+# Bind host: localhost by default. For Tailscale, set NISABA_HOST to your
+# tailnet IP (tailscale ip -4) before running this script — not 0.0.0.0, which
+# would also expose the service on untrusted networks.
 Environment=NISABA_HOST=${NISABA_HOST:-127.0.0.1}
 
 [Install]

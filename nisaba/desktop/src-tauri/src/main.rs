@@ -49,8 +49,16 @@ fn read_service_token() -> Option<String> {
     Some(rest[..end].to_string())
 }
 
+// Escape a value for embedding inside a double-quoted JS string literal. Covers
+// the JS line terminators too (\n \r U+2028 U+2029) so this stays safe even if
+// an input's charset ever loosens (L6).
 fn js_string(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"")
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\u{2028}', "\\u2028")
+        .replace('\u{2029}', "\\u2029")
 }
 
 fn service_answering(p: u16) -> bool {
@@ -58,22 +66,15 @@ fn service_answering(p: u16) -> bool {
 }
 
 // Locate the bundled sidecar next to this executable. Tauri places externalBin
-// binaries alongside the main binary (with or without the target-triple suffix
-// depending on version), so try the plain name first, then any sibling that
-// starts with it.
+// binaries alongside the main binary, named either plainly or with the target
+// triple. Match those exact names only — never a prefix scan of the dir (L4).
 fn find_sidecar() -> Option<PathBuf> {
     let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
-    let plain = dir.join("nisaba-service");
-    if plain.exists() {
-        return Some(plain);
-    }
-    for entry in fs::read_dir(&dir).ok()?.flatten() {
-        let name = entry.file_name();
-        if name.to_string_lossy().starts_with("nisaba-service") {
-            return Some(entry.path());
-        }
-    }
-    None
+    let candidates = [
+        "nisaba-service".to_string(),
+        format!("nisaba-service-{}", env!("TARGET")),
+    ];
+    candidates.iter().map(|n| dir.join(n)).find(|p| p.exists())
 }
 
 // Start the bundled service if nothing is already serving the port. Returns the

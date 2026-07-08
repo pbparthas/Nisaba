@@ -20,14 +20,16 @@ const SESSION_TTL = 60 * 60 * 24 * 180; // 180 days
 const form = (obj) => new URLSearchParams(obj);
 
 function corsHeaders(origin, allowed) {
-  const ok = allowed.includes(origin) ? origin : (allowed[0] || '');
-  return {
-    'Access-Control-Allow-Origin': ok,
+  const h = {
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     Vary: 'Origin',
   };
+  // Only echo the origin when it's allowlisted; on mismatch omit the header
+  // entirely (never emit a fixed fallback origin — L3).
+  if (origin && allowed.includes(origin)) h['Access-Control-Allow-Origin'] = origin;
+  return h;
 }
 const json = (obj, status, headers) =>
   new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -75,6 +77,14 @@ export default {
 
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: ch });
 
+    // CSRF guard (M1): a browser always sends Origin on a cross-origin POST.
+    // Reject state-changing POSTs whose Origin is present but not allowlisted.
+    // A missing Origin (non-browser — e.g. the desktop Node service, which sends
+    // the session cookie explicitly, not ambiently) is not a CSRF vector.
+    if (req.method === 'POST' && origin && !allowed.includes(origin)) {
+      return json({ error: 'forbidden_origin' }, 403, ch);
+    }
+
     try {
       if (url.pathname === '/exchange' && req.method === 'POST') {
         const { code, redirect_uri, code_verifier } = await req.json().catch(() => ({}));
@@ -85,15 +95,20 @@ export default {
           code, redirect_uri: redirect, grant_type: 'authorization_code',
           ...(code_verifier ? { code_verifier } : {}),
         });
-        if (!ok) return json({ error: 'exchange_failed', detail: data }, 400, ch);
+        if (!ok) { console.log('exchange_failed', JSON.stringify(data)); return json({ error: 'exchange_failed' }, 400, ch); }
 
-        let sid = getCookie(req, COOKIE) || newSessionId();
-        const existing = await env.SESSIONS.get(sid, 'json');
+        // Always mint a fresh session id (anti session-fixation — L5); carry the
+        // refresh token forward from any prior session so a re-auth that Google
+        // answers without a new refresh_token still works.
+        const oldSid = getCookie(req, COOKIE);
+        const existing = oldSid ? await env.SESSIONS.get(oldSid, 'json') : null;
+        const sid = newSessionId();
         const refresh_token = data.refresh_token || existing?.refresh_token;
         // No refresh token means Google didn't grant offline access (usually a
         // returning grant). The app should re-consent.
         if (!refresh_token) return json({ error: 'no_refresh_token' }, 400, ch);
         await env.SESSIONS.put(sid, JSON.stringify({ refresh_token }), { expirationTtl: SESSION_TTL });
+        if (oldSid && oldSid !== sid) await env.SESSIONS.delete(oldSid).catch(() => {});
 
         return json({ access_token: data.access_token, expires_in: data.expires_in }, 200, {
           ...ch, 'Set-Cookie': setCookie(sid, domain, SESSION_TTL),
@@ -109,7 +124,8 @@ export default {
         });
         if (!ok) {
           if (data.error === 'invalid_grant') { await env.SESSIONS.delete(sid); return json({ error: 'revoked' }, 401, ch); }
-          return json({ error: 'refresh_failed', detail: data }, 400, ch);
+          console.log('refresh_failed', JSON.stringify(data));
+          return json({ error: 'refresh_failed' }, 400, ch);
         }
         // refresh the cookie's lifetime on use
         return json({ access_token: data.access_token, expires_in: data.expires_in }, 200, {
@@ -134,7 +150,8 @@ export default {
 
       return json({ error: 'not_found' }, 404, ch);
     } catch (e) {
-      return json({ error: 'server_error', detail: String(e) }, 500, ch);
+      console.log('server_error', String(e));
+      return json({ error: 'server_error' }, 500, ch);
     }
   },
 };

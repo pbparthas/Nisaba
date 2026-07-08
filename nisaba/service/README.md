@@ -103,16 +103,27 @@ internet.
    tailscale ip -4          # e.g. 100.101.102.103
    tailscale status         # shows the MagicDNS name, e.g. partha-tp-e14.tailXXXX.ts.net
    ```
-3. **Let the service listen on the tailnet.** Reinstall the unit with the bind
-   host opened up (it still serves localhost too, so sign-in keeps working):
-   ```bash
-   NISABA_HOST=0.0.0.0 bash systemd/install.sh
-   systemctl --user restart nisaba.service
-   ```
-   `0.0.0.0` = all interfaces (localhost + Tailscale). Every endpoint except
-   `/ping` still needs the bearer token, and only devices on your tailnet can
-   route to it — but if you're ever on an untrusted LAN, that network can also
-   reach the port, so treat the bearer token as the real guard.
+3. **Let the service listen on the tailnet.** How depends on whether this
+   machine also runs local clients (the desktop app / Claude Code CLI / the
+   OAuth loopback all need `localhost`):
+   - **Dedicated host** (e.g. a Pi that only serves mobile): bind the tailnet IP
+     — only tailnet devices can reach it. Do the one-time sign-in first with the
+     default localhost bind, since loopback OAuth needs `localhost`:
+     ```bash
+     NISABA_HOST=$(tailscale ip -4) bash systemd/install.sh
+     systemctl --user restart nisaba.service
+     ```
+   - **Your laptop** (also runs the desktop app): you need both localhost *and*
+     the tailnet, which means `0.0.0.0` — **but** `0.0.0.0` also exposes it on
+     any untrusted LAN/Wi-Fi you join, and `/ping` is unauthenticated. Only do
+     this with a firewall rule limiting the port to the tailnet, e.g.:
+     ```bash
+     sudo ufw allow in on tailscale0 to any port 27125
+     sudo ufw deny 27125
+     NISABA_HOST=0.0.0.0 bash systemd/install.sh && systemctl --user restart nisaba.service
+     ```
+   Either way, every endpoint except `/ping` still needs the bearer token —
+   treat it as the real guard.
 4. **Point mobile Claude at it.** In the phone's Claude Code, using the laptop's
    MagicDNS name (nicer than the IP):
    ```bash

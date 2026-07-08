@@ -80,12 +80,12 @@ nisaba/app                 React 19 + Vite PWA (no framework beyond React)
   src/lib/merge.js         resolveItem(): per-item LWW + conflict copies (notes only)
   src/lib/sync.js          engine: snapshot → pull changed → push dirty → attachments
   src/lib/drive.js         Drive v3 REST client, drive.file scope, injectable baseUrl
-  src/lib/auth.js          GIS token client; ns_signed_in flag follows real tokens
+  src/lib/auth.js          three modes: GIS token, Worker backend (default), service
   src/lib/store-idb.js     IndexedDB store; store-memory.js mirrors it for tests
-  src/App.jsx              all UI (phase-1 level; BlockNote replaces note editor next)
-  src/styles.css           cream "Golazo-inspired" theme (owner chose it; keep it)
+  src/App.jsx              all UI; note editor is NoteEditorBlock.jsx (BlockNote, lazy)
+  src/styles.css           Reed Green "Matchday Programme" theme (paper default + dark)
   test/mock-drive.js       in-process mock of the Drive v3 surface (ESM)
-  test/*.test.js           vitest: 19 cases (merge + two-device sync)
+  test/*.test.js           vitest: 20 app cases (merge + two-device sync); service adds 17
   test/e2e-*.cjs           Playwright browser tests (run with playwright-core,
                            executablePath /opt/pw-browsers/chromium, --no-sandbox)
 ```

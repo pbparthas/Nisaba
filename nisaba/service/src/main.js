@@ -21,9 +21,10 @@ import { createApi } from './api.js';
 import { createServer } from './server.js';
 
 const PORT = Number(process.env.NISABA_PORT) || 27125;
-// Bind address. Default localhost-only (secure). Set NISABA_HOST=0.0.0.0 to also
-// listen on the Tailscale interface so mobile Claude can reach it over the
-// tailnet — every endpoint except /ping still requires the bearer token.
+// Bind address. Default localhost-only (secure). To reach it over Tailscale,
+// set NISABA_HOST to your *tailnet IP* (e.g. `tailscale ip -4` → 100.x.y.z) so
+// it listens only on the tailnet interface. Avoid 0.0.0.0 — that binds every
+// interface (incl. untrusted LAN/Wi-Fi) and /ping is unauthenticated.
 const HOST = process.env.NISABA_HOST || '127.0.0.1';
 const WORKER_URL = process.env.NISABA_WORKER_URL || 'https://auth.orionforge.dev';
 const CLIENT_ID = process.env.NISABA_CLIENT_ID || '652122307592-300cfvid9hl2s4t59hm9c4mivbtm3beq.apps.googleusercontent.com';
@@ -33,21 +34,21 @@ const REDIRECT_URI = `http://localhost:${PORT}/oauth/callback`;
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 async function loadOrCreateToken() {
-  if (process.env.NISABA_TOKEN) return process.env.NISABA_TOKEN;
+  if (process.env.NISABA_TOKEN) return { token: process.env.NISABA_TOKEN, created: false };
   await fs.mkdir(CONFIG_DIR, { recursive: true });
   const file = path.join(CONFIG_DIR, 'service.json');
-  try { return JSON.parse(await fs.readFile(file, 'utf8')).token; }
+  try { return { token: JSON.parse(await fs.readFile(file, 'utf8')).token, created: false }; }
   catch { /* first run */ }
   const token = crypto.randomBytes(24).toString('base64url');
   await fs.writeFile(file, JSON.stringify({ token }, null, 2), { mode: 0o600 });
-  return token;
+  return { token, created: true };
 }
 
 async function main() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(CONFIG_DIR, { recursive: true });
 
-  const token = await loadOrCreateToken();
+  const { token, created: tokenCreated } = await loadOrCreateToken();
   const store = createFileStore(DATA_DIR);
   const auth = createWorkerAuth({
     workerUrl: WORKER_URL,
@@ -88,9 +89,14 @@ async function main() {
   api.sync().catch((e) => console.warn('initial sync deferred:', e.message));
   setInterval(() => api.sync().catch(() => {}), SYNC_INTERVAL_MS).unref();
 
+  // Print the literal token only when it was just generated (or in debug) — on
+  // routine starts it would otherwise land in journalctl/logs (L1).
+  const showToken = tokenCreated || process.env.NISABA_DEBUG;
+  const bearer = showToken ? token : '<token from ~/.config/nisaba/service.json>';
   console.log('\n── Connect Claude Code ─────────────────────────────────────');
   console.log(`claude mcp add nisaba --transport http http://localhost:${PORT}/mcp \\`);
-  console.log(`  --header "Authorization: Bearer ${token}"`);
+  console.log(`  --header "Authorization: Bearer ${bearer}"`);
+  if (!showToken) console.log('  (token stored in ~/.config/nisaba/service.json — cat it if you need it)');
   console.log('\nREST base:  http://localhost:' + PORT + '   (same bearer token)');
   console.log('Discovery:  curl http://localhost:' + PORT + '/ping');
   console.log('────────────────────────────────────────────────────────────\n');
