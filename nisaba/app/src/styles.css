@@ -481,6 +481,25 @@ input, textarea, button { font-family: inherit; }
 .file-btn { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 13px; padding: 10px 4px; display: inline-flex; align-items: center; gap: 6px; }
 .error { color: var(--overdue); font-size: 13px; min-height: 1em; }
 
+/* ---------- sign-in screen (first run) ---------- */
+.signin {
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  padding: 32px 24px calc(32px + env(safe-area-inset-bottom));
+}
+.signin-inner { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.signin-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.signin-brand .word.big { font-size: 56px; transform: translateY(8px); }
+.signin-tag { color: var(--muted); font-size: 15px; line-height: 1.4; margin-bottom: 10px; }
+.signin-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 6px; }
+.signin .btn { min-height: 48px; font-size: 15px; }
+.btn.wide { width: 100%; }
+.btn.google {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  background: #ffffff; color: #3c4043; border: 1px solid var(--line); font-weight: 600;
+}
+:root[data-mode="dark"] .btn.google { background: #201c15; color: var(--ink); border-color: var(--line); }
+.btn.google:disabled { opacity: 0.6; }
+
 /* ---------- setup ---------- */
 .setup { padding: 48px 24px; display: flex; flex-direction: column; gap: 16px; max-width: 640px; margin: 0 auto; }
 .setup .brand { margin-bottom: 6px; }
