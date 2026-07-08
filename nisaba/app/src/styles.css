@@ -388,18 +388,35 @@ input, textarea, button { font-family: inherit; }
 .ink-dot[data-ink="rust"] { background: #b0562b; }
 .ink-dot[data-ink="olive"] { background: #5c6a1f; }
 
-/* Font picker — a vertical list, each row rendered in its own face. */
-.font-list { display: flex; flex-direction: column; gap: 6px; }
-.font-list button {
+/* Font picker — a collapsed dropdown; the trigger and each row render in their
+   own face, so the many decorative options don't take over the page. */
+.font-dd { position: relative; }
+.font-dd-btn {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   width: 100%; text-align: left; cursor: pointer;
-  background: transparent; color: var(--ink);
+  background: var(--card); color: var(--ink);
   border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
-  font-size: 18px; line-height: 1.1;
+  font-size: 18px; line-height: 1.15;
 }
-.font-list button .fname { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-family: "Inter", sans-serif; }
-.font-list button.on { border-color: var(--accent); background: var(--accent-wash); }
-.font-list button.on .fname { color: var(--accent); }
+.font-dd-btn .chev { color: var(--muted); font-size: 11px; font-family: "Inter", sans-serif; }
+.font-dd-menu {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
+  max-height: 300px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2); padding: 6px;
+}
+.font-dd-menu button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; cursor: pointer;
+  background: transparent; color: var(--ink); border: 0; border-radius: 9px;
+  padding: 10px 12px; font-size: 18px; line-height: 1.1;
+}
+.font-dd-menu button:hover { background: var(--accent-wash); }
+.font-dd-menu button.on { background: var(--accent-wash); color: var(--accent); }
+.font-dd-menu button .fname,
+.font-dd-btn .chev { flex: none; }
+.font-dd-menu button .fname { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-family: "Inter", sans-serif; }
+.font-dd-menu button.on .fname { color: var(--accent); }
 
 .toggle { display: flex; gap: 8px; }
 .toggle button {

@@ -540,6 +540,41 @@ function TaskRow({ task: t, today, open, onToggleOpen, saveItem, selMode, select
   );
 }
 
+// Collapsed dropdown for the note font — each row (and the current value) is
+// rendered in its own face, so the many decorative options don't fill the page.
+function FontPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const current = NOTE_FONT_OPTIONS.find(([k]) => k === value) || NOTE_FONT_OPTIONS[0];
+  return (
+    <div className="font-dd" ref={ref}>
+      <button className="font-dd-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+        <span style={{ fontFamily: NOTE_FONTS[current[0]] }}>{current[1]}</span>
+        <span className="chev">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="font-dd-menu" role="listbox">
+          {NOTE_FONT_OPTIONS.map(([k, l]) => (
+            <button key={k} role="option" aria-selected={value === k} className={value === k ? 'on' : ''}
+              onClick={() => { onChange(k); setOpen(false); }}>
+              <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>
+              <span className="fname">{l}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onSignOut, itemCount }) {
   // Install state comes from the app-wide capture (lib/pwaInstall) so it's known
   // even though the browser fired beforeinstallprompt before this screen mounted.
@@ -597,14 +632,7 @@ function Settings({ mode, setAppMode, signedIn, status, statusKey, onSignIn, onS
         <span className="eyebrow">Note text</span>
         <div className="pref">
           <label>Font</label>
-          <div className="font-list">
-            {NOTE_FONT_OPTIONS.map(([k, l]) => (
-              <button key={k} className={prefs.font === k ? 'on' : ''} onClick={() => updatePref('font', k)}>
-                <span style={{ fontFamily: NOTE_FONTS[k] }}>{l}</span>
-                <span className="fname">{l}</span>
-              </button>
-            ))}
-          </div>
+          <FontPicker value={prefs.font} onChange={(k) => updatePref('font', k)} />
         </div>
         <div className="pref">
           <label>Size</label>
